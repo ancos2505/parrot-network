@@ -1,9 +1,12 @@
-mod pages;
+mod endpoints;
 
 use std::{
     collections::BTreeMap,
+    fmt::Display,
+    fs::File,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    os::unix::fs::MetadataExt,
     sync::{Arc, Mutex},
     thread::{self},
     time::Instant,
@@ -15,12 +18,13 @@ use h10::http::{
     result::{H10LibError, H10LibResult},
     status_code::StatusCode,
 };
+use serde::Deserialize;
 
 use crate::{CLI_ARGS, HTTP10_STRICT_MODE, MAX_ACTIVE_SESSIONS};
 
 use crate::node::log::LogLevel;
 
-use self::pages::Endpoint;
+use self::endpoints::Endpoint;
 
 pub(crate) use crate::node::{
     cli::{Cli, CliVerboseMode},
@@ -30,8 +34,8 @@ pub(crate) use crate::node::{
 
 use super::constants::MAX_HTTP_MESSAGE_LENGTH;
 
-pub(crate) struct WebuiResponse(Response);
-impl WebuiResponse {
+pub(crate) struct ServerResponse(Response);
+impl ServerResponse {
     pub(crate) fn new(status: StatusCode) -> Self {
         if HTTP10_STRICT_MODE.get().is_some() {
             Self(Response::new(status))
@@ -47,18 +51,33 @@ impl WebuiResponse {
     }
 }
 
-impl IntoResponse for WebuiResponse {
+impl IntoResponse for ServerResponse {
     fn into_response(self) -> Response {
         self.0
     }
 }
 
-pub(crate) struct WebuiServer;
-impl WebuiServer {
+pub(crate) struct NodeServer;
+impl NodeServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
-    fn listener(cli_data: &Cli) -> String {
-        format!("{}:{}", cli_data.ip_address, cli_data.port)
+    fn get_config(cli: &Cli) -> ServerResult<Config> {
+        let path = &*cli.config_file;
+        let mut toml_str = "".to_string();
+        let mut file = File::open(path)?;
+        let metadata = file.metadata()?;
+
+        if metadata.size() > 1024 * 1024 {
+            return Err(ServerError::Custom(
+                "Server config file is larger than 1MByte.".into(),
+            ));
+        }
+
+        file.read_to_string(&mut toml_str)?;
+        Ok(toml::from_str(&toml_str)?)
+    }
+    fn listener(server_config: &Config) -> String {
+        format!("{}", server_config.server)
     }
     pub(crate) fn run() -> ServerResult<()> {
         if let Some(cli) = CLI_ARGS.get() {
@@ -66,14 +85,15 @@ impl WebuiServer {
                 Cli::usage();
                 return Ok(());
             }
+            let server_config = Self::get_config(cli)?;
 
             let mut active_sessions = Arc::new(Mutex::new(0));
 
-            let list_str = Self::listener(cli);
+            let list_str = Self::listener(&server_config);
             let listener = TcpListener::bind(&list_str)?;
             // let listener = TcpListener::bind(&list_str)?;
 
-            println!("WebUI: Listening for connections on {}", list_str);
+            println!("Node: Listening for connections on {}", list_str);
             let prev_stats: Arc<Mutex<BTreeMap<String, (u64, u64)>>> =
                 Arc::new(Mutex::new(BTreeMap::new()));
 
@@ -151,14 +171,14 @@ impl WebuiServer {
                     Ok(res) => res,
                     Err(error) => {
                         // dbg!(error);
-                        WebuiResponse::new(StatusCode::ServiceUnavailable)
+                        ServerResponse::new(StatusCode::ServiceUnavailable)
                     }
                 }
             } else {
-                WebuiResponse::new(StatusCode::ServiceUnavailable)
+                ServerResponse::new(StatusCode::ServiceUnavailable)
             }
         } else {
-            WebuiResponse::new(StatusCode::ServiceUnavailable)
+            ServerResponse::new(StatusCode::ServiceUnavailable)
         };
 
         if let Err(error) =
@@ -177,7 +197,7 @@ impl WebuiServer {
             now.elapsed().as_secs_f64(),
         );
     }
-    fn handle_read(mut stream: &TcpStream) -> H10LibResult<WebuiResponse> {
+    fn handle_read(mut stream: &TcpStream) -> H10LibResult<ServerResponse> {
         // let slow_motion = Duration::from_millis(1234);
         // dbg!(slow_motion);
         // sleep(slow_motion);
@@ -202,7 +222,7 @@ impl WebuiServer {
         // prev_stats: &mut BTreeMap<String, (u64, u64)>,
         arc_prev_stats: &Arc<Mutex<BTreeMap<String, (u64, u64)>>>,
         mut stream: TcpStream,
-        server_response: WebuiResponse,
+        server_response: ServerResponse,
         act_session: &Arc<Mutex<usize>>,
     ) -> H10LibResult<()> {
         // let prev_stats = Arc::clone(arc_prev_stats);
@@ -232,5 +252,37 @@ impl WebuiServer {
             Err(e) => println!("Failed sending response: {}", e),
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    // global_string: Option<String>,
+    // global_integer: Option<u64>,
+    server: ServerConfig,
+    peers: Option<Vec<PeerConfig>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ServerConfig {
+    ip: String,
+    port: u16,
+}
+
+impl Display for ServerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.ip, self.port)
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct PeerConfig {
+    ip: String,
+    port: u16,
+}
+
+impl Display for PeerConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:{}", self.ip, self.port)
     }
 }

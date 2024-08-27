@@ -1,24 +1,24 @@
+mod config_file;
 mod help;
-// mod http10_strict_mode;
-mod ip_address;
-mod port_number;
 mod traits;
 mod verbose;
+mod webui_ip;
+mod webui_port;
 
 use std::{collections::BTreeMap, env::Args};
 
-use crate::node::{
-    cli::traits::ArgName,
-    result::{ServerError, ServerResult},
-};
+use config_file::CliConfigFile;
+use traits::ArgFields;
+
+use crate::node::result::{ServerError, ServerResult};
 // use super::log::LogLevel;
 
 pub(crate) use self::{
     help::CliHelp,
-    //  http10_strict_mode::CliHttp10StrictMode,
-    ip_address::CliWebUiIpAddress,
-    port_number::CliWebUiPortNumber,
     verbose::CliVerboseMode,
+    //  http10_strict_mode::CliHttp10StrictMode,
+    webui_ip::CliWebUiIpAddress,
+    webui_port::CliWebUiPortNumber,
 };
 
 const MAX_CLI_NUM_FIELDS: usize = 4;
@@ -30,6 +30,7 @@ pub(crate) struct Cli {
     pub(crate) is_help: bool,
     pub(crate) ip_address: CliWebUiIpAddress,
     pub(crate) port: CliWebUiPortNumber,
+    pub(crate) config_file: CliConfigFile,
     // pub(crate) h10_strict_mode: CliHttp10StrictMode,
     pub(crate) verbose: CliVerboseMode,
 }
@@ -47,42 +48,45 @@ impl Cli {
             repo = env!("CARGO_PKG_REPOSITORY")
         );
         eprintln!("");
-        eprintln!(
-            "Usage: {pkg_name}-node [OPTION]",
-            pkg_name = env!("CARGO_PKG_NAME")
-        );
+        eprintln!("Usage: parrot-node [OPTION]");
         eprintln!("");
         eprintln!("Options:");
+        eprintln!(r#"  {:<28}{}"#, CliHelp::long(), CliHelp::description());
+        eprintln!("");
         eprintln!(
-            r#"  {}                      Display this message"#,
-            CliHelp::arg_name()
+            r#"  {:<28}{}"#,
+            CliVerboseMode::long(),
+            CliVerboseMode::description()
         );
         eprintln!("");
         eprintln!(
-            r#"  {}                   Show raw contents from both Request and Response"#,
-            CliVerboseMode::arg_name()
+            r#"  {:<28}{}"#,
+            format!("{}=<IP ADDRESS>", CliWebUiIpAddress::long()),
+            CliWebUiIpAddress::description()
         );
         eprintln!("");
         eprintln!(
-            r#"  {}=<IP ADDRESS>     IPv4 or IPv6 to listening"#,
-            CliWebUiIpAddress::arg_name()
+            r#"  {:<28}{}"#,
+            format!("{}=<PORT NUMBER>", CliWebUiPortNumber::long()),
+            CliWebUiPortNumber::description()
         );
         eprintln!("");
         eprintln!(
-            r#"  {}=<PORT NUMBER>  Port to listen [1024-65535] (RFC7605#section-4)"#,
-            CliWebUiPortNumber::arg_name()
+            r#"  {:<28}{}"#,
+            format!("{}=<PATH>", CliConfigFile::long()),
+            CliConfigFile::description()
         );
         eprintln!("");
     }
 }
-
+// --webui-port=<PORT NUMBER>
 impl TryFrom<CliArgs> for Cli {
     type Error = ServerError;
     fn try_from(mut value: CliArgs) -> Result<Self, Self::Error> {
-        let is_help = value.0.contains_key(&CliHelp::arg_name());
+        let is_help = value.0.contains_key(CliHelp::long());
 
         let ip_address = {
-            if let Some(arg) = value.0.remove(&CliWebUiIpAddress::arg_name()) {
+            if let Some(arg) = value.0.remove(CliWebUiIpAddress::long()) {
                 arg.parse::<CliWebUiIpAddress>()?
             } else {
                 CliWebUiIpAddress::default()
@@ -90,7 +94,7 @@ impl TryFrom<CliArgs> for Cli {
         };
 
         let port = {
-            if let Some(arg) = value.0.remove(&CliWebUiPortNumber::arg_name()) {
+            if let Some(arg) = value.0.remove(CliWebUiPortNumber::long()) {
                 arg.parse::<CliWebUiPortNumber>()?
             } else {
                 CliWebUiPortNumber::default()
@@ -99,20 +103,30 @@ impl TryFrom<CliArgs> for Cli {
 
         // let h10_strict_mode = value
         //     .0
-        //     .remove(&CliHttp10StrictMode::arg_name())
+        //     .remove(&CliHttp10StrictMode::long())
         //     .map(|_| CliHttp10StrictMode::Enabled)
         //     .unwrap_or_default();
         let verbose = value
             .0
-            .remove(&CliVerboseMode::arg_name())
+            .remove(CliVerboseMode::long())
             .map(|_| CliVerboseMode::Enabled)
             .unwrap_or_default();
+
+        let config_file = {
+            if let Some(arg) = value.0.remove(CliConfigFile::long()) {
+                arg.parse::<CliConfigFile>()?
+            } else {
+                CliConfigFile::default()
+            }
+        };
+
         Ok(Self {
             is_help,
             ip_address,
             port,
             // h10_strict_mode,
             verbose,
+            config_file,
         })
     }
 }
@@ -136,16 +150,18 @@ impl TryFrom<Args> for Cli {
             let maybe_key = arg.next();
             let value = arg.collect::<Vec<_>>().join("=");
             if let Some(key) = maybe_key {
-                if key == CliHelp::arg_name() {
-                    cli_args.add((CliHelp::arg_name(), value));
-                } else if key == CliWebUiIpAddress::arg_name() {
-                    cli_args.add((CliWebUiIpAddress::arg_name(), value));
-                } else if key == CliWebUiPortNumber::arg_name() {
-                    cli_args.add((CliWebUiPortNumber::arg_name(), value));
-                // } else if key == CliHttp10StrictMode::arg_name() {
-                //     cli_args.add((CliHttp10StrictMode::arg_name(), value));
-                } else if key == CliVerboseMode::arg_name() {
-                    cli_args.add((CliVerboseMode::arg_name(), value));
+                if key == CliHelp::long() {
+                    cli_args.add((CliHelp::long().into(), value));
+                } else if key == CliWebUiIpAddress::long() {
+                    cli_args.add((CliWebUiIpAddress::long().into(), value));
+                } else if key == CliWebUiPortNumber::long() {
+                    cli_args.add((CliWebUiPortNumber::long().into(), value));
+                } else if key == CliConfigFile::long() {
+                    cli_args.add((CliConfigFile::long().into(), value));
+                // } else if key == CliHttp10StrictMode::long() {
+                //     cli_args.add((CliHttp10StrictMode::long(), value));
+                } else if key == CliVerboseMode::long() {
+                    cli_args.add((CliVerboseMode::long().into(), value));
                 } else {
                     return Err(ServerError::InvalidCLiArgs(key.into()));
                 }

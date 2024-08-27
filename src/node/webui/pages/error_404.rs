@@ -9,9 +9,9 @@ use h10::http::{
     status_code::StatusCode,
 };
 
-use crate::node::webui::ServerResponse;
+use super::WebuiResponse;
 
-pub(crate) fn error_404() -> H10LibResult<ServerResponse> {
+pub(crate) fn error_404() -> H10LibResult<WebuiResponse> {
     let favicon_disabled = Link::builder()
         .attr("rel", "shortcut icon")
         .attr("href", "data:image/x-icon;,")
@@ -31,7 +31,7 @@ pub(crate) fn error_404() -> H10LibResult<ServerResponse> {
     #[cfg(feature = "debug")]
     println!("{html:?}");
 
-    Ok(ServerResponse::new(StatusCode::NotFound)
+    Ok(WebuiResponse::new(StatusCode::NotFound)
         .header(ContentType::html())
         .header(Server::default())
         .header(Pragma::default())

@@ -1,19 +1,23 @@
 use crate::node::webui::ServerError;
 
-use super::traits::ArgName;
+use super::traits::ArgFields;
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
 #[derive(Debug)]
 pub(crate) struct CliWebUiPortNumber(u16);
 impl Default for CliWebUiPortNumber {
     fn default() -> Self {
-        Self(8080)
+        Self(9000)
     }
 }
 
-impl ArgName for CliWebUiPortNumber {
-    fn arg_name() -> String {
-        "--webui-port".into()
+impl ArgFields for CliWebUiPortNumber {
+    fn long() -> &'static str {
+        "--webui-port"
+    }
+
+    fn description() -> &'static str {
+        "Port to listen [1024-65535] (RFC7605#section-4)"
     }
 }
 

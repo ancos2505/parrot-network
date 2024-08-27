@@ -1,6 +1,7 @@
 use crate::node::webui::ServerError;
 
-use super::traits::ArgName;
+use super::traits::ArgFields;
+
 use std::{
     fmt::Display,
     net::{IpAddr, Ipv4Addr},
@@ -16,9 +17,13 @@ impl Default for CliWebUiIpAddress {
     }
 }
 
-impl ArgName for CliWebUiIpAddress {
-    fn arg_name() -> String {
-        "--webui-ip".into()
+impl ArgFields for CliWebUiIpAddress {
+    fn long() -> &'static str {
+        "--webui-ip"
+    }
+
+    fn description() -> &'static str {
+        "IPv4 or IPv6 to listening"
     }
 }
 

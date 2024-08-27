@@ -1,4 +1,4 @@
-use super::traits::ArgName;
+use super::traits::ArgFields;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum CliVerboseMode {
@@ -7,8 +7,12 @@ pub(crate) enum CliVerboseMode {
     Disabled,
 }
 
-impl ArgName for CliVerboseMode {
-    fn arg_name() -> String {
-        "--verbose".into()
+impl ArgFields for CliVerboseMode {
+    fn long() -> &'static str {
+        "--verbose"
+    }
+
+    fn description() -> &'static str {
+        "Show raw contents from both Request and Response"
     }
 }

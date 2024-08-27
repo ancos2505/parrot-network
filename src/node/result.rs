@@ -6,7 +6,7 @@ use std::{
     sync::{PoisonError, RwLockReadGuard},
 };
 
-use h10::http::result::H10LibError;
+use h10::http::{result::H10LibError, status_code::StatusCode};
 
 pub(crate) type ServerResult<T> = Result<T, ServerError>;
 
@@ -15,6 +15,7 @@ pub(crate) enum ServerError {
     H10LibError(H10LibError),
     StdIoError(StdIoError),
     AddrParseError(AddrParseError),
+    TomlFileError(toml::de::Error),
     PoisonErrorRwLockReadGuard,
     PortParseError,
     InvalidLogLevel,
@@ -27,6 +28,11 @@ impl ServerError {
     }
 }
 
+impl From<toml::de::Error> for ServerError {
+    fn from(value: toml::de::Error) -> Self {
+        Self::TomlFileError(value)
+    }
+}
 impl<T> From<PoisonError<RwLockReadGuard<'_, T>>> for ServerError {
     fn from(_: PoisonError<RwLockReadGuard<'_, T>>) -> Self {
         Self::PoisonErrorRwLockReadGuard
@@ -54,3 +60,19 @@ impl Display for ServerError {
 }
 
 impl StdError for ServerError {}
+
+impl From<ServerError> for StatusCode {
+    fn from(value: ServerError) -> Self {
+        match value {
+            ServerError::H10LibError(h10error) => h10error.into(),
+            ServerError::StdIoError(_)
+            | ServerError::AddrParseError(_)
+            | ServerError::PoisonErrorRwLockReadGuard
+            | ServerError::PortParseError
+            | ServerError::InvalidLogLevel
+            | ServerError::InvalidCLiArgs(_)
+            | ServerError::TomlFileError(_)
+            | ServerError::Custom(_) => StatusCode::InternalServerError,
+        }
+    }
+}

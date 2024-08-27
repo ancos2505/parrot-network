@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  node01:
+    image: busybox:musl
+    command: ["sh", "-c", "/app/startup.sh"]
+    networks:
+      - isolated_network
+    volumes:
+      - ../dist/parrot-node:/app/parrot-node:ro
+      - ./parrot-node.toml:/app/parrot-node.toml:ro
+      - ./startup.sh:/app/startup.sh:ro
+
+  node02:
+    image: busybox:musl
+    command: ["sh", "-c", "/app/startup.sh"]
+    networks:
+      - isolated_network
+    volumes:
+      - ../dist/parrot-node:/app/parrot-node:ro
+      - ./parrot-node.toml:/app/parrot-node.toml:ro
+      - ./startup.sh:/app/startup.sh:ro
+
+networks:
+  isolated_network:
+    driver: bridge
+    internal: true

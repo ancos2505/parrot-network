@@ -2,7 +2,7 @@
 edition = "2021"
 rust-version = "1.80.1"
 name = "parrot-network"
-version = "0.0.3"
+version = "0.0.4"
 description = "Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol"
 readme = "README.md"
 keywords = ["blockchain", "http", "server", "web", "crypto"]
@@ -27,6 +27,7 @@ html-rs = "0.3"
 rand = "0.8.5"
 serde = { version = "1.0.209", features = ["serde_derive"] }
 sha2 = "0.10.8"
+toml = "0.8.19"
 
 
 [features]
@@ -82,11 +83,11 @@ unnameable-types = "forbid"
 unsafe-op-in-unsafe-fn = "forbid"
 unstable-features = "forbid"
 # unused-crate-dependencies = "allow"
-unused-extern-crates = "forbid"
+unused-extern-crates = "deny"
 unused-import-braces = "forbid"
 unused-lifetimes = "forbid"
 unused-macro-rules = "forbid"
-unused-qualifications = "forbid"
+unused-qualifications = "deny"
 unused-results = "allow"
 variant-size-differences = "forbid"
 invalid-type-param-default = "forbid"

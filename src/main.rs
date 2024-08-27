@@ -4,9 +4,13 @@ mod proto;
 use std::{
     process::ExitCode,
     sync::{atomic::AtomicUsize, OnceLock},
+    thread,
 };
 
-use crate::node::webui::{Cli, HttpServer, ServerError, ServerResult};
+use self::node::{
+    server::NodeServer,
+    webui::{Cli, ServerError, ServerResult, WebuiServer},
+};
 
 // Unsafe
 static ROOT_PAGER_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -20,20 +24,25 @@ pub(crate) const MAX_ACTIVE_SESSIONS: usize = 5_000;
 fn main() -> ExitCode {
     match smain() {
         Ok(_) => ExitCode::SUCCESS,
-        Err(err) => match err {
-            ServerError::InvalidCLiArgs(arg) => {
-                eprintln!("Error: unexpected argument '{arg}'\n");
-                Cli::usage();
-                ExitCode::FAILURE
+        Err(err) => {
+            eprintln!("Error: '{err}'\n");
+
+            match err {
+                ServerError::InvalidCLiArgs(arg) => {
+                    eprintln!("Error: unexpected argument '{arg}'\n");
+                    Cli::usage();
+                    ExitCode::FAILURE
+                }
+                ServerError::TomlFileError(_)
+                | ServerError::H10LibError(_)
+                | ServerError::StdIoError(_)
+                | ServerError::AddrParseError(_)
+                | ServerError::PoisonErrorRwLockReadGuard
+                | ServerError::PortParseError
+                | ServerError::InvalidLogLevel
+                | ServerError::Custom(_) => ExitCode::from(2),
             }
-            ServerError::H10LibError(_)
-            | ServerError::StdIoError(_)
-            | ServerError::AddrParseError(_)
-            | ServerError::PoisonErrorRwLockReadGuard
-            | ServerError::PortParseError
-            | ServerError::InvalidLogLevel
-            | ServerError::Custom(_) => ExitCode::from(2),
-        },
+        }
     }
 }
 
@@ -41,6 +50,8 @@ fn smain() -> ServerResult<()> {
     let cli = Cli::parse()?;
     CLI_ARGS.get_or_init(|| cli);
 
-    HttpServer::run()?;
+    thread::spawn(|| -> ServerResult<()> { WebuiServer::run() });
+
+    NodeServer::run()?;
     Ok(())
 }

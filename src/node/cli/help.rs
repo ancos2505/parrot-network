@@ -1,4 +1,4 @@
-use super::traits::ArgName;
+use super::traits::ArgFields;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) enum CliHelp {
@@ -7,8 +7,12 @@ pub(crate) enum CliHelp {
     Disabled,
 }
 
-impl ArgName for CliHelp {
-    fn arg_name() -> String {
-        "--help".into()
+impl ArgFields for CliHelp {
+    fn long() -> &'static str {
+        "--help"
+    }
+
+    fn description() -> &'static str {
+        "Display this message"
     }
 }

@@ -4,21 +4,16 @@ mod styles_css;
 
 use h10::http::request::Request;
 
-use crate::{
-    node::webui::{
-        // CliHttp10StrictMode,
-        CliVerboseMode,
-        ServerResponse,
-    },
-    CLI_ARGS,
-};
+use crate::{node::webui::CliVerboseMode, CLI_ARGS};
+
+use super::WebuiResponse;
 
 use self::styles_css::styles_css;
 
 pub(crate) struct Endpoint;
 
 impl Endpoint {
-    pub(crate) fn dispatcher(raw_request: &[u8]) -> ServerResponse {
+    pub(crate) fn dispatcher(raw_request: &[u8]) -> WebuiResponse {
         use super::pages::{error_404::error_404, root::root};
 
         let request = match Request::parse(raw_request) {
@@ -29,7 +24,7 @@ impl Endpoint {
                         eprintln!("Error: {err}");
                     }
                 }
-                return ServerResponse::new(err.into());
+                return WebuiResponse::new(err.into());
             }
         };
 
@@ -41,7 +36,7 @@ impl Endpoint {
 
         match res {
             Ok(response) => return response,
-            Err(err) => ServerResponse::new(err.into()),
+            Err(err) => WebuiResponse::new(err.into()),
         }
     }
 }

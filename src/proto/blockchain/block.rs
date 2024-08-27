@@ -9,7 +9,7 @@ use self::{
     timestamp::BlockTimestamp,
 };
 
-pub struct Block {
+pub(crate) struct Block {
     current: BlockHash,
     index: BlockIndex,
     nonce: BlockNonce,

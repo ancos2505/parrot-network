@@ -46,7 +46,6 @@ impl Cli {
             desc = env!("CARGO_PKG_DESCRIPTION"),
             repo = env!("CARGO_PKG_REPOSITORY")
         );
-
         eprintln!("");
         eprintln!(
             "Usage: {pkg_name}-node [OPTION]",

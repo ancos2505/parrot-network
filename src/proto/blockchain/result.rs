@@ -2,10 +2,10 @@ use std::array::TryFromSliceError;
 
 use ed25519_dalek::SignatureError;
 
-pub type H10BlockchainProtoResult<T> = Result<T, H10BlockchainProtoError>;
+pub(crate) type H10BlockchainProtoResult<T> = Result<T, H10BlockchainProtoError>;
 
 #[derive(Debug)]
-pub enum H10BlockchainProtoError {
+pub(crate) enum H10BlockchainProtoError {
     SignatureError(SignatureError),
     TryFromSliceError(TryFromSliceError),
     Custom(String),

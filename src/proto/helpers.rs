@@ -1,1 +1,1 @@
-pub mod safe_vec;
+pub(crate) mod safe_vec;

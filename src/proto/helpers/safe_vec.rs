@@ -1,5 +1,5 @@
 #[allow(dead_code)]
-pub fn safe_swap_remove<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
+pub(crate) fn safe_swap_remove<T>(vec: &mut Vec<T>, index: usize) -> Option<T> {
     if vec.get_mut(index).is_some() {
         let last_idx = vec.len() - 1;
         vec.swap(index, last_idx);

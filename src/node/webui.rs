@@ -32,17 +32,17 @@ use super::constants::MAX_HTTP_MESSAGE_LENGTH;
 
 pub(crate) struct ServerResponse(Response);
 impl ServerResponse {
-    pub fn new(status: StatusCode) -> Self {
+    pub(crate) fn new(status: StatusCode) -> Self {
         if HTTP10_STRICT_MODE.get().is_some() {
             Self(Response::new(status))
         } else {
             Self(Response::new(status).header(Connection::default()))
         }
     }
-    pub fn header<H: IntoHeader>(self, header: H) -> Self {
+    pub(crate) fn header<H: IntoHeader>(self, header: H) -> Self {
         Self(self.0.header(header))
     }
-    pub fn body<B: ToString>(self, body: B) -> Self {
+    pub(crate) fn body<B: ToString>(self, body: B) -> Self {
         Self(self.0.body(body))
     }
 }
@@ -60,7 +60,7 @@ impl HttpServer {
     fn listener(cli_data: &Cli) -> String {
         format!("{}:{}", cli_data.ip_address, cli_data.port)
     }
-    pub fn run() -> ServerResult<()> {
+    pub(crate) fn run() -> ServerResult<()> {
         if let Some(cli) = CLI_ARGS.get() {
             if cli.is_help {
                 Cli::usage();

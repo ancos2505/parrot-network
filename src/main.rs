@@ -1,4 +1,5 @@
 mod node;
+mod proto;
 
 use std::{
     process::ExitCode,

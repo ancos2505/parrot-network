@@ -4,7 +4,7 @@
 //! **Reference**: https://github.com/rust-bitcoin/rust-bitcoin/blob/bitcoin-0.32.2/bitcoin/src/blockdata/opcodes.rs
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Opcode {
+pub(crate) enum Opcode {
     /// Alias for OP_PUSHBYTES_0
     OP_0,
     /// Alias for OP_PUSHBYTES_0

@@ -1,2 +1,2 @@
 #[derive(Debug, PartialEq, Eq)]
-pub struct BlockIndex(u32);
+pub(crate) struct BlockIndex(u32);

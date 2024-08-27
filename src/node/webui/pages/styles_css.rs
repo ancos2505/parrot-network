@@ -6,7 +6,7 @@ use h10::http::{
 
 use crate::node::webui::ServerResponse;
 
-pub fn styles_css() -> H10LibResult<ServerResponse> {
+pub(crate) fn styles_css() -> H10LibResult<ServerResponse> {
     let css = include_str!("../../../../assets/styles.css");
 
     Ok(ServerResponse::new(StatusCode::OK)

@@ -11,7 +11,7 @@ use h10::http::{
 
 use crate::node::webui::ServerResponse;
 
-pub fn error_404() -> H10LibResult<ServerResponse> {
+pub(crate) fn error_404() -> H10LibResult<ServerResponse> {
     let favicon_disabled = Link::builder()
         .attr("rel", "shortcut icon")
         .attr("href", "data:image/x-icon;,")

@@ -3,7 +3,7 @@
 //!
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Opcode {
+pub(crate) enum Opcode {
     /// Alias for OP_PUSHBYTES_0
     OP_0,
     /// Alias for OP_PUSHBYTES_0

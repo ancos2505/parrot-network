@@ -14,7 +14,7 @@ use h10::http::{
 
 use crate::{node::webui::ServerResponse, ROOT_PAGER_COUNTER};
 
-pub fn root(request: Request) -> H10LibResult<ServerResponse> {
+pub(crate) fn root(request: Request) -> H10LibResult<ServerResponse> {
     if let Some(endpoint) = request.query_string.get("endpoint") {
         match &**endpoint.value() {
             "counter" => {

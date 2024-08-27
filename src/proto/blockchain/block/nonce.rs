@@ -1,2 +1,2 @@
 #[derive(Debug, PartialEq, Eq)]
-pub struct BlockNonce(u64);
+pub(crate) struct BlockNonce(u64);

@@ -1,2 +1,2 @@
 #[derive(Debug, PartialEq, Eq)]
-pub struct BlockTimestamp(u128);
+pub(crate) struct BlockTimestamp(u128);

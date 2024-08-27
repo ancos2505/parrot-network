@@ -8,13 +8,13 @@ use ed25519_dalek::{
 use super::result::{H10BlockchainProtoError, H10BlockchainProtoResult};
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Wallet {
+pub(crate) struct Wallet {
     private_key: PrivateKey,
     pubkey: PublicKey,
     signing_key: SigningKey,
 }
 impl Wallet {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let private_key: PrivateKey = {
             use rand::{rngs::OsRng, RngCore};
             let mut inner_buf: SecretKey = [0u8; SECRET_KEY_LENGTH];
@@ -34,7 +34,7 @@ impl Wallet {
         }
     }
 
-    pub fn keypair_import(keypair: &[u8; KEYPAIR_LENGTH]) -> H10BlockchainProtoResult<Self> {
+    pub(crate) fn keypair_import(keypair: &[u8; KEYPAIR_LENGTH]) -> H10BlockchainProtoResult<Self> {
         let signing_key = SigningKey::from_keypair_bytes(keypair)?;
 
         let keypair_bytes = signing_key.to_keypair_bytes();
@@ -50,15 +50,15 @@ impl Wallet {
         })
     }
 
-    pub fn keypair_export(&self) -> [u8; KEYPAIR_LENGTH] {
+    pub(crate) fn keypair_export(&self) -> [u8; KEYPAIR_LENGTH] {
         self.signing_key.to_keypair_bytes()
     }
 
-    pub fn sign(&self, message: &[u8]) -> Signature {
+    pub(crate) fn sign(&self, message: &[u8]) -> Signature {
         self.signing_key.sign(message)
     }
 
-    pub fn verify(
+    pub(crate) fn verify(
         &self,
         message: &[u8],
         signature: &Signature,
@@ -70,13 +70,13 @@ impl Wallet {
         Ok(())
     }
 
-    pub fn pubkey(&self) -> &PublicKey {
+    pub(crate) fn pubkey(&self) -> &PublicKey {
         &self.pubkey
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct PrivateKey([u8; SECRET_KEY_LENGTH]);
+pub(crate) struct PrivateKey([u8; SECRET_KEY_LENGTH]);
 
 impl From<[u8; SECRET_KEY_LENGTH]> for PrivateKey {
     fn from(value: [u8; SECRET_KEY_LENGTH]) -> Self {
@@ -93,7 +93,7 @@ impl Deref for PrivateKey {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct PublicKey([u8; PUBLIC_KEY_LENGTH]);
+pub(crate) struct PublicKey([u8; PUBLIC_KEY_LENGTH]);
 
 impl From<&VerifyingKey> for PublicKey {
     fn from(value: &VerifyingKey) -> Self {

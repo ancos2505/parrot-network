@@ -1,3 +1,2 @@
-pub mod blockchain;
+pub(crate) mod blockchain;
 mod helpers;
-pub mod http;

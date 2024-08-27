@@ -7,17 +7,17 @@ use std::rc::Rc;
 use h10::http::result::{H10LibError, H10LibResult};
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct FileSystem {
-    pub root: Rc<RefCell<FsNode>>,
+pub(crate) struct FileSystem {
+    pub(crate) root: Rc<RefCell<FsNode>>,
 }
 
 impl FileSystem {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         FileSystem {
             root: Rc::new(RefCell::new(FsNode::Directory(Directory::new("/")))),
         }
     }
-    pub fn print_structure(&self) {
+    pub(crate) fn print_structure(&self) {
         self.print_node(&self.root, 0);
     }
 
@@ -44,13 +44,13 @@ impl fmt::Display for FileSystem {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum FsNode {
+pub(crate) enum FsNode {
     File(File),
     Directory(Directory),
 }
 
 impl FsNode {
-    pub fn add_directory(&mut self, dir: Directory) -> H10LibResult<()> {
+    pub(crate) fn add_directory(&mut self, dir: Directory) -> H10LibResult<()> {
         if let FsNode::Directory(directory) = self {
             directory.add_directory(dir);
             Ok(())
@@ -61,7 +61,7 @@ impl FsNode {
         }
     }
 
-    pub fn add_file(&mut self, file: File) -> H10LibResult<()> {
+    pub(crate) fn add_file(&mut self, file: File) -> H10LibResult<()> {
         if let FsNode::Directory(directory) = self {
             directory.add_file(file);
             Ok(())
@@ -74,7 +74,7 @@ impl FsNode {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FsNodeMetadata {
+pub(crate) struct FsNodeMetadata {
     name: FsNodeName,
     created_at: UnixTimeStamp,
     updated_at: UnixTimeStamp,
@@ -83,34 +83,34 @@ pub struct FsNodeMetadata {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct File {
+pub(crate) struct File {
     metadata: FsNodeMetadata,
     content: FileContent,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FileContent {
+pub(crate) struct FileContent {
     size: usize,
     inner: Vec<u8>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Directory {
+pub(crate) struct Directory {
     metadata: FsNodeMetadata,
     contents: Vec<Rc<RefCell<FsNode>>>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct FsNodeName(Rc<str>);
+pub(crate) struct FsNodeName(Rc<str>);
 
 impl FsNodeName {
-    pub fn from_str(s: &str) -> H10LibResult<Self> {
+    pub(crate) fn from_str(s: &str) -> H10LibResult<Self> {
         Ok(Self(s.into()))
     }
 }
 
 impl Directory {
-    pub fn new(name: &str) -> Self {
+    pub(crate) fn new(name: &str) -> Self {
         Directory {
             metadata: FsNodeMetadata {
                 name: FsNodeName::from_str(name).unwrap(),
@@ -123,19 +123,19 @@ impl Directory {
         }
     }
 
-    pub fn add_file(&mut self, file: File) {
+    pub(crate) fn add_file(&mut self, file: File) {
         self.contents
             .push(Rc::new(RefCell::new(FsNode::File(file))));
     }
 
-    pub fn add_directory(&mut self, dir: Directory) {
+    pub(crate) fn add_directory(&mut self, dir: Directory) {
         self.contents
             .push(Rc::new(RefCell::new(FsNode::Directory(dir))));
     }
 }
 
 impl File {
-    pub fn new(name: &str, content: &str) -> Self {
+    pub(crate) fn new(name: &str, content: &str) -> Self {
         File {
             metadata: FsNodeMetadata {
                 name: FsNodeName::from_str(name).unwrap(),
@@ -153,10 +153,10 @@ impl File {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UnixTimeStamp(i64);
+pub(crate) struct UnixTimeStamp(i64);
 
 impl UnixTimeStamp {
-    pub fn now() -> H10LibResult<Self> {
+    pub(crate) fn now() -> H10LibResult<Self> {
         use std::time::SystemTime;
         let now = SystemTime::now();
         let now_unix_epoch = now.duration_since(SystemTime::UNIX_EPOCH)?;
@@ -166,23 +166,23 @@ impl UnixTimeStamp {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UnixPermission(u16);
+pub(crate) struct UnixPermission(u16);
 
 impl UnixPermission {
-    pub fn new(owner: u8, group: u8, others: u8) -> Self {
+    pub(crate) fn new(owner: u8, group: u8, others: u8) -> Self {
         let value = ((owner as u16) << 6) | ((group as u16) << 3) | (others as u16);
         Self(value)
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UnixOwnership {
+pub(crate) struct UnixOwnership {
     uid: UnixUid,
     gid: UnixGid,
 }
 
 impl UnixOwnership {
-    pub fn new(uid: usize, gid: usize) -> H10LibResult<Self> {
+    pub(crate) fn new(uid: usize, gid: usize) -> H10LibResult<Self> {
         Ok(Self {
             uid: UnixUid::new(uid)?,
             gid: UnixGid::new(gid)?,
@@ -191,18 +191,18 @@ impl UnixOwnership {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UnixUid(NonZeroUsize);
+pub(crate) struct UnixUid(NonZeroUsize);
 impl UnixUid {
-    pub fn new(id: usize) -> H10LibResult<Self> {
+    pub(crate) fn new(id: usize) -> H10LibResult<Self> {
         todo!();
         Ok(Self(NonZeroUsize::try_from(id).unwrap()))
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub struct UnixGid(NonZeroUsize);
+pub(crate) struct UnixGid(NonZeroUsize);
 impl UnixGid {
-    pub fn new(id: usize) -> H10LibResult<Self> {
+    pub(crate) fn new(id: usize) -> H10LibResult<Self> {
         todo!();
         Ok(Self(NonZeroUsize::try_from(id).unwrap()))
     }

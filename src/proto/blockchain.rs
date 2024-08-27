@@ -1,6 +1,6 @@
 mod block;
 mod constants;
-pub mod pvm;
-pub mod result;
+pub(crate) mod pvm;
+pub(crate) mod result;
 mod transaction;
-pub mod wallet;
+pub(crate) mod wallet;

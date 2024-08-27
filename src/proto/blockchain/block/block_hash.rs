@@ -1,2 +1,2 @@
 #[derive(Debug, PartialEq, Eq)]
-pub struct BlockHash([u8; 32]);
+pub(crate) struct BlockHash([u8; 32]);

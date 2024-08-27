@@ -15,10 +15,10 @@ use crate::{
 
 use self::styles_css::styles_css;
 
-pub struct Endpoint;
+pub(crate) struct Endpoint;
 
 impl Endpoint {
-    pub fn dispatcher(raw_request: &[u8]) -> ServerResponse {
+    pub(crate) fn dispatcher(raw_request: &[u8]) -> ServerResponse {
         use super::pages::{error_404::error_404, root::root};
 
         let request = match Request::parse(raw_request) {

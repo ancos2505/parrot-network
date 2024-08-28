@@ -6,3 +6,4 @@ pub(crate) mod result;
 pub(crate) mod server;
 pub(crate) mod traits;
 pub(crate) mod webui;
+pub(crate) mod db;

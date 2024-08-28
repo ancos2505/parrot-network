@@ -28,17 +28,7 @@ fn main() -> ExitCode {
         Ok(_) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("Error: '{err}'\n");
-
-            match err {
-                ServerError::TomlFileError(_)
-                | ServerError::H10LibError(_)
-                | ServerError::StdIoError(_)
-                | ServerError::AddrParseError(_)
-                | ServerError::PoisonErrorRwLockReadGuard
-                | ServerError::PortParseError
-                | ServerError::InvalidLogLevel
-                | ServerError::Custom(_) => ExitCode::from(2),
-            }
+            ExitCode::from(2)
         }
     }
 }

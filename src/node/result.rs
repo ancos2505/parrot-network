@@ -7,6 +7,7 @@ use std::{
 };
 
 use h10::http::{result::H10LibError, status_code::StatusCode};
+use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
 
 pub(crate) type ServerResult<T> = Result<T, ServerError>;
 
@@ -19,11 +20,47 @@ pub(crate) enum ServerError {
     PoisonErrorRwLockReadGuard,
     PortParseError,
     InvalidLogLevel,
+    DbTransactionError(TransactionError),
+    DbTableError(TableError),
+    DbDatabaseError(DatabaseError),
+    DbStorageError(StorageError),
+    DbCommitError(CommitError),
     Custom(String),
 }
+
 impl ServerError {
     pub(crate) fn custom<S: ToString>(s: S) -> Self {
         Self::Custom(s.to_string())
+    }
+}
+
+impl From<CommitError> for ServerError {
+    fn from(value: CommitError) -> Self {
+        Self::DbCommitError(value)
+    }
+}
+
+impl From<StorageError> for ServerError {
+    fn from(value: StorageError) -> Self {
+        Self::DbStorageError(value)
+    }
+}
+
+impl From<DatabaseError> for ServerError {
+    fn from(value: DatabaseError) -> Self {
+        Self::DbDatabaseError(value)
+    }
+}
+
+impl From<TableError> for ServerError {
+    fn from(value: TableError) -> Self {
+        Self::DbTableError(value)
+    }
+}
+
+impl From<TransactionError> for ServerError {
+    fn from(value: TransactionError) -> Self {
+        Self::DbTransactionError(value)
     }
 }
 
@@ -56,16 +93,19 @@ impl Display for ServerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = "".to_string();
         match self {
-            ServerError::H10LibError(err) => output.push_str(format!("{err}").as_str()),
-            ServerError::StdIoError(err) => output.push_str(format!("{err}").as_str()),
-            ServerError::AddrParseError(err) => output.push_str(format!("{err}").as_str()),
-            ServerError::TomlFileError(err) => output.push_str(format!("{err}").as_str()),
-            ServerError::PoisonErrorRwLockReadGuard => {
-                output.push_str("PoisonErrorRwLockReadGuard")
-            }
-            ServerError::PortParseError => output.push_str("PortParseError"),
-            ServerError::InvalidLogLevel => output.push_str("Invalid LogLevel"),
-            ServerError::Custom(err) => output.push_str(format!("{err}").as_str()),
+            Self::H10LibError(err) => output.push_str(format!("{err}").as_str()),
+            Self::StdIoError(err) => output.push_str(format!("{err}").as_str()),
+            Self::AddrParseError(err) => output.push_str(format!("{err}").as_str()),
+            Self::TomlFileError(err) => output.push_str(format!("{err}").as_str()),
+            Self::PoisonErrorRwLockReadGuard => output.push_str("PoisonErrorRwLockReadGuard"),
+            Self::PortParseError => output.push_str("PortParseError"),
+            Self::InvalidLogLevel => output.push_str("Invalid LogLevel"),
+            Self::DbTransactionError(err) => output.push_str(format!("{err}").as_str()),
+            Self::DbTableError(err) => output.push_str(format!("{err}").as_str()),
+            Self::DbDatabaseError(err) => output.push_str(format!("{err}").as_str()),
+            Self::DbStorageError(err) => output.push_str(format!("{err}").as_str()),
+            Self::DbCommitError(err) => output.push_str(format!("{err}").as_str()),
+            Self::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)
     }
@@ -83,6 +123,11 @@ impl From<ServerError> for StatusCode {
             | ServerError::PortParseError
             | ServerError::InvalidLogLevel
             | ServerError::TomlFileError(_)
+            | ServerError::DbTransactionError(_)
+            | ServerError::DbTableError(_)
+            | ServerError::DbDatabaseError(_)
+            | ServerError::DbStorageError(_)
+            | ServerError::DbCommitError(_)
             | ServerError::Custom(_) => StatusCode::InternalServerError,
         }
     }

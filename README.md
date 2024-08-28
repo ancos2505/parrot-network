@@ -21,18 +21,19 @@ $ parrot-node --help
 
 ### Usage
 ```
-Parrot Network Node (v0.0.5): Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol - https://github.com/ancos2505/parrot-network
+Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol
 
-Usage: parrot-node [OPTION]
+Usage: parrot-node [OPTIONS]
 
 Options:
-  --help                      Display this message
-
-  --verbose                   Show raw contents from both Request and Response
-
-  --webui-ip=<IP ADDRESS>     IPv4 or IPv6 to listening
-
-  --webui-port=<PORT NUMBER>  Port to listen [1024-65535] (RFC7605#section-4)
+      --webui-ip=<WEBUI_IP>        [default: 127.0.0.1]
+      --webui-port=<WEBUI_PORT>    [default: 9000]
+      --server-ip=<SERVER_IP>      [default: 0.0.0.0]
+      --server-port=<SERVER_PORT>  [default: 8080]
+      --config-file=<CONFIG_FILE>  [default: ./parrot-node.toml]
+      --verbose                    
+  -h, --help                       Print help
+  -V, --version                    Print version
 
 ```
 ### Dev mode
@@ -43,10 +44,10 @@ cargo run
 ```
 #### Terminal 2
 ```
-curl -v localhost:8080
+curl -v localhost:9000
 ```
 
-or open in your browser: http://localhost:8080/
+or open webui in your browser: http://localhost:9000/
 
 ![Opened in browser](/docs/imgs/opened_in_browser.png)
 ## Roadmap

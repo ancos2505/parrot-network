@@ -2,7 +2,7 @@
 edition = "2021"
 rust-version = "1.80.1"
 name = "parrot-network"
-version = "0.0.5"
+version = "0.0.6"
 description = "Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol"
 readme = "README.md"
 keywords = ["blockchain", "http", "server", "web", "crypto"]
@@ -26,6 +26,7 @@ ed25519-dalek = "2.1.1"
 h10 = "0.6.0"
 html-rs = "0.3"
 rand = "0.8.5"
+redb = "2.1.2"
 serde = { version = "1.0.209", features = ["serde_derive"] }
 sha2 = "0.10.8"
 toml = "0.8.19"

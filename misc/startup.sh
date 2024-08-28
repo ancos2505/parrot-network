@@ -11,4 +11,4 @@ else
 	
 fi
 
-/app/parrot-node --webui-ip=0.0.0.0 --config-file=/app/parrot-node.toml
+/app/parrot-node --webui-ip=0.0.0.0 --verbose --config-file=/app/parrot-node.toml

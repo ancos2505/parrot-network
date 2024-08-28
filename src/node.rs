@@ -1,9 +1,9 @@
 pub(crate) mod attic;
 pub(crate) mod cli;
 pub(crate) mod constants;
+pub(crate) mod db;
 pub(crate) mod log;
 pub(crate) mod result;
 pub(crate) mod server;
 pub(crate) mod traits;
 pub(crate) mod webui;
-pub(crate) mod db;

@@ -3,7 +3,9 @@ use std::{
     fmt::Display,
     io::Error as StdIoError,
     net::AddrParseError,
+    num::TryFromIntError,
     sync::{PoisonError, RwLockReadGuard},
+    time::SystemTimeError,
 };
 
 use h10::http::{result::H10LibError, status_code::StatusCode};
@@ -25,6 +27,9 @@ pub(crate) enum ServerError {
     DbDatabaseError(DatabaseError),
     DbStorageError(StorageError),
     DbCommitError(CommitError),
+    SerdeJson(serde_json::Error),
+    SystemTimeError(SystemTimeError),
+    TryFromIntError(TryFromIntError),
     Custom(String),
 }
 
@@ -34,6 +39,22 @@ impl ServerError {
     }
 }
 
+impl From<TryFromIntError> for ServerError {
+    fn from(value: TryFromIntError) -> Self {
+        Self::TryFromIntError(value)
+    }
+}
+impl From<SystemTimeError> for ServerError {
+    fn from(value: SystemTimeError) -> Self {
+        Self::SystemTimeError(value)
+    }
+}
+
+impl From<serde_json::Error> for ServerError {
+    fn from(value: serde_json::Error) -> Self {
+        Self::SerdeJson(value)
+    }
+}
 impl From<CommitError> for ServerError {
     fn from(value: CommitError) -> Self {
         Self::DbCommitError(value)
@@ -105,6 +126,9 @@ impl Display for ServerError {
             Self::DbDatabaseError(err) => output.push_str(format!("{err}").as_str()),
             Self::DbStorageError(err) => output.push_str(format!("{err}").as_str()),
             Self::DbCommitError(err) => output.push_str(format!("{err}").as_str()),
+            Self::SerdeJson(err) => output.push_str(format!("{err}").as_str()),
+            Self::SystemTimeError(err) => output.push_str(format!("{err}").as_str()),
+            Self::TryFromIntError(err) => output.push_str(format!("{err}").as_str()),
             Self::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)
@@ -117,18 +141,7 @@ impl From<ServerError> for StatusCode {
     fn from(value: ServerError) -> Self {
         match value {
             ServerError::H10LibError(h10error) => h10error.into(),
-            ServerError::StdIoError(_)
-            | ServerError::AddrParseError(_)
-            | ServerError::PoisonErrorRwLockReadGuard
-            | ServerError::PortParseError
-            | ServerError::InvalidLogLevel
-            | ServerError::TomlFileError(_)
-            | ServerError::DbTransactionError(_)
-            | ServerError::DbTableError(_)
-            | ServerError::DbDatabaseError(_)
-            | ServerError::DbStorageError(_)
-            | ServerError::DbCommitError(_)
-            | ServerError::Custom(_) => StatusCode::InternalServerError,
+            _ => StatusCode::InternalServerError,
         }
     }
 }

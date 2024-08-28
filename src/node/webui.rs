@@ -23,7 +23,7 @@ use crate::node::log::LogLevel;
 use self::pages::Endpoint;
 
 pub(crate) use crate::node::{
-    cli::{Cli, CliVerboseMode},
+    cli::Cli,
     result::{ServerError, ServerResult},
     traits::IntoResponse,
 };
@@ -58,15 +58,10 @@ impl WebuiServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
     fn listener(cli_data: &Cli) -> String {
-        format!("{}:{}", cli_data.ip_address, cli_data.port)
+        format!("{}:{}", cli_data.webui_ip, cli_data.webui_port)
     }
     pub(crate) fn run() -> ServerResult<()> {
         if let Some(cli) = CLI_ARGS.get() {
-            if cli.is_help {
-                Cli::usage();
-                return Ok(());
-            }
-
             let mut active_sessions = Arc::new(Mutex::new(0));
 
             let list_str = Self::listener(cli);
@@ -186,7 +181,7 @@ impl WebuiServer {
         match stream.read(&mut buf) {
             Ok(bytes) => {
                 if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose == CliVerboseMode::Enabled {
+                    if cli_data.verbose {
                         println!("Request received: {bytes} Bytes.");
                     }
                 }
@@ -221,7 +216,7 @@ impl WebuiServer {
         match stream.write(response_str.as_bytes()) {
             Ok(bytes) => {
                 if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose == CliVerboseMode::Enabled {
+                    if cli_data.verbose {
                         println!("Response sent: {bytes} Bytes.");
                         println!("{response_str}");
                     } else {

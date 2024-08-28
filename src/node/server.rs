@@ -27,7 +27,7 @@ use crate::node::log::LogLevel;
 use self::endpoints::Endpoint;
 
 pub(crate) use crate::node::{
-    cli::{Cli, CliVerboseMode},
+    cli::Cli,
     result::{ServerError, ServerResult},
     traits::IntoResponse,
 };
@@ -62,9 +62,10 @@ impl NodeServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
     fn get_config(cli: &Cli) -> ServerResult<Config> {
-        let path = &*cli.config_file;
         let mut toml_str = "".to_string();
-        let mut file = File::open(path)?;
+        let config_file = &cli.config_file;
+        let mut file = File::open(&config_file)
+            .map_err(|_| ServerError::Custom(format!("Config file not found `{config_file}`.")))?;
         let metadata = file.metadata()?;
 
         if metadata.size() > 1024 * 1024 {
@@ -81,10 +82,6 @@ impl NodeServer {
     }
     pub(crate) fn run() -> ServerResult<()> {
         if let Some(cli) = CLI_ARGS.get() {
-            if cli.is_help {
-                Cli::usage();
-                return Ok(());
-            }
             let server_config = Self::get_config(cli)?;
 
             let mut active_sessions = Arc::new(Mutex::new(0));
@@ -206,7 +203,7 @@ impl NodeServer {
         match stream.read(&mut buf) {
             Ok(bytes) => {
                 if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose == CliVerboseMode::Enabled {
+                    if cli_data.verbose {
                         println!("Request received: {bytes} Bytes.");
                     }
                 }
@@ -241,7 +238,7 @@ impl NodeServer {
         match stream.write(response_str.as_bytes()) {
             Ok(bytes) => {
                 if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose == CliVerboseMode::Enabled {
+                    if cli_data.verbose {
                         println!("Response sent: {bytes} Bytes.");
                         println!("{response_str}");
                     } else {

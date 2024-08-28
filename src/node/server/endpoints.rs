@@ -1,6 +1,6 @@
 use h10::http::{request::Request, status_code::StatusCode};
 
-use crate::{node::webui::CliVerboseMode, CLI_ARGS};
+use crate::CLI_ARGS;
 
 use super::{ServerResponse, ServerResult};
 
@@ -12,7 +12,7 @@ impl Endpoint {
             Ok(req) => req,
             Err(err) => {
                 if let Some(cli) = CLI_ARGS.get() {
-                    if cli.verbose == CliVerboseMode::Enabled {
+                    if cli.verbose {
                         eprintln!("Error: {err}");
                     }
                 }

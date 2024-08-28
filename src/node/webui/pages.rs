@@ -4,7 +4,7 @@ mod styles_css;
 
 use h10::http::request::Request;
 
-use crate::{node::webui::CliVerboseMode, CLI_ARGS};
+use crate::CLI_ARGS;
 
 use super::WebuiResponse;
 
@@ -20,7 +20,7 @@ impl Endpoint {
             Ok(req) => req,
             Err(err) => {
                 if let Some(cli) = CLI_ARGS.get() {
-                    if cli.verbose == CliVerboseMode::Enabled {
+                    if cli.verbose {
                         eprintln!("Error: {err}");
                     }
                 }

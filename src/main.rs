@@ -7,6 +7,8 @@ use std::{
     thread,
 };
 
+use clap::Parser;
+
 use self::node::{
     server::NodeServer,
     webui::{Cli, ServerError, ServerResult, WebuiServer},
@@ -28,11 +30,6 @@ fn main() -> ExitCode {
             eprintln!("Error: '{err}'\n");
 
             match err {
-                ServerError::InvalidCLiArgs(arg) => {
-                    eprintln!("Error: unexpected argument '{arg}'\n");
-                    Cli::usage();
-                    ExitCode::FAILURE
-                }
                 ServerError::TomlFileError(_)
                 | ServerError::H10LibError(_)
                 | ServerError::StdIoError(_)
@@ -47,7 +44,7 @@ fn main() -> ExitCode {
 }
 
 fn smain() -> ServerResult<()> {
-    let cli = Cli::parse()?;
+    let cli = Cli::parse();
     CLI_ARGS.get_or_init(|| cli);
 
     thread::spawn(|| -> ServerResult<()> { WebuiServer::run() });

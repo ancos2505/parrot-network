@@ -19,7 +19,6 @@ pub(crate) enum ServerError {
     PoisonErrorRwLockReadGuard,
     PortParseError,
     InvalidLogLevel,
-    InvalidCLiArgs(String),
     Custom(String),
 }
 impl ServerError {
@@ -55,7 +54,20 @@ impl From<H10LibError> for ServerError {
 }
 impl Display for ServerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        let mut output = "".to_string();
+        match self {
+            ServerError::H10LibError(err) => output.push_str(format!("{err}").as_str()),
+            ServerError::StdIoError(err) => output.push_str(format!("{err}").as_str()),
+            ServerError::AddrParseError(err) => output.push_str(format!("{err}").as_str()),
+            ServerError::TomlFileError(err) => output.push_str(format!("{err}").as_str()),
+            ServerError::PoisonErrorRwLockReadGuard => {
+                output.push_str("PoisonErrorRwLockReadGuard")
+            }
+            ServerError::PortParseError => output.push_str("PortParseError"),
+            ServerError::InvalidLogLevel => output.push_str("Invalid LogLevel"),
+            ServerError::Custom(err) => output.push_str(format!("{err}").as_str()),
+        };
+        write!(f, "{}", output)
     }
 }
 
@@ -70,7 +82,6 @@ impl From<ServerError> for StatusCode {
             | ServerError::PoisonErrorRwLockReadGuard
             | ServerError::PortParseError
             | ServerError::InvalidLogLevel
-            | ServerError::InvalidCLiArgs(_)
             | ServerError::TomlFileError(_)
             | ServerError::Custom(_) => StatusCode::InternalServerError,
         }

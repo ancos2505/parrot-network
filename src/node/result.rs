@@ -1,15 +1,19 @@
 use std::{
+    // array::TryFromSliceError,
     error::Error as StdError,
     fmt::Display,
     io::Error as StdIoError,
     net::AddrParseError,
-    num::TryFromIntError,
+    // num::TryFromIntError,
     sync::{PoisonError, RwLockReadGuard},
-    time::SystemTimeError,
+    // time::SystemTimeError,
 };
 
+use ed25519_dalek::ed25519::Error as Ed25519Error;
 use h10::http::{result::H10LibError, status_code::StatusCode};
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
+
+use crate::proto::blockchain::result::BlockchainProtoError;
 
 pub(crate) type ServerResult<T> = Result<T, ServerError>;
 
@@ -27,9 +31,12 @@ pub(crate) enum ServerError {
     DbDatabaseError(DatabaseError),
     DbStorageError(StorageError),
     DbCommitError(CommitError),
-    SerdeJson(serde_json::Error),
-    SystemTimeError(SystemTimeError),
-    TryFromIntError(TryFromIntError),
+    // SerdeJson(SerdeJsonError),
+    // SystemTimeError(SystemTimeError),
+    // TryFromIntError(TryFromIntError),
+    // TryFromSliceError(TryFromSliceError),
+    BlockchainProtoError(BlockchainProtoError),
+    Ed25519Error(Ed25519Error),
     Custom(String),
 }
 
@@ -39,22 +46,40 @@ impl ServerError {
     }
 }
 
-impl From<TryFromIntError> for ServerError {
-    fn from(value: TryFromIntError) -> Self {
-        Self::TryFromIntError(value)
+impl From<BlockchainProtoError> for ServerError {
+    fn from(value: BlockchainProtoError) -> Self {
+        Self::BlockchainProtoError(value)
     }
 }
-impl From<SystemTimeError> for ServerError {
-    fn from(value: SystemTimeError) -> Self {
-        Self::SystemTimeError(value)
+impl From<Ed25519Error> for ServerError {
+    fn from(value: Ed25519Error) -> Self {
+        Self::Ed25519Error(value)
     }
 }
 
-impl From<serde_json::Error> for ServerError {
-    fn from(value: serde_json::Error) -> Self {
-        Self::SerdeJson(value)
-    }
-}
+// impl From<TryFromSliceError> for ServerError {
+//     fn from(value: TryFromSliceError) -> Self {
+//         Self::TryFromSliceError(value)
+//     }
+// }
+
+// impl From<TryFromIntError> for ServerError {
+//     fn from(value: TryFromIntError) -> Self {
+//         Self::TryFromIntError(value)
+//     }
+// }
+// impl From<SystemTimeError> for ServerError {
+//     fn from(value: SystemTimeError) -> Self {
+//         Self::SystemTimeError(value)
+//     }
+// }
+
+// impl From<SerdeJsonError> for ServerError {
+//     fn from(value: SerdeJsonError) -> Self {
+//         Self::SerdeJson(value)
+//     }
+// }
+
 impl From<CommitError> for ServerError {
     fn from(value: CommitError) -> Self {
         Self::DbCommitError(value)
@@ -126,9 +151,12 @@ impl Display for ServerError {
             Self::DbDatabaseError(err) => output.push_str(format!("{err}").as_str()),
             Self::DbStorageError(err) => output.push_str(format!("{err}").as_str()),
             Self::DbCommitError(err) => output.push_str(format!("{err}").as_str()),
-            Self::SerdeJson(err) => output.push_str(format!("{err}").as_str()),
-            Self::SystemTimeError(err) => output.push_str(format!("{err}").as_str()),
-            Self::TryFromIntError(err) => output.push_str(format!("{err}").as_str()),
+            // Self::SerdeJson(err) => output.push_str(format!("{err}").as_str()),
+            // Self::SystemTimeError(err) => output.push_str(format!("{err}").as_str()),
+            // Self::TryFromIntError(err) => output.push_str(format!("{err}").as_str()),
+            // Self::TryFromSliceError(err) => output.push_str(format!("{err}").as_str()),
+            Self::Ed25519Error(err) => output.push_str(format!("{err}").as_str()),
+            Self::BlockchainProtoError(err) => output.push_str(format!("{err}").as_str()),
             Self::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)

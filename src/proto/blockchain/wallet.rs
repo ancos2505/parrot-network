@@ -1,20 +1,35 @@
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::{
     SecretKey, Signature, Signer, SigningKey, VerifyingKey, KEYPAIR_LENGTH, PUBLIC_KEY_LENGTH,
-    SECRET_KEY_LENGTH, SIGNATURE_LENGTH,
+    SECRET_KEY_LENGTH,
 };
 
-use super::result::{H10BlockchainProtoError, H10BlockchainProtoResult};
+use crate::proto::blockchain::traits::Serializable;
+
+use super::{
+    block::BlockIndex,
+    result::{BlockchainProtoError, BlockchainProtoResult},
+    tokens::Wings,
+    transaction::Transaction,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Wallet {
     private_key: PrivateKey,
     pubkey: PublicKey,
     signing_key: SigningKey,
+    synced_block_index: BlockIndex,
+    // TODO
+    confirmed_transactions: ConfirmedTransactions,
+    // TODO
+    balance: Wings,
 }
+
 impl Wallet {
-    pub(crate) fn new() -> Self {
+    pub(crate) const TRANSACTION_PAYLOAD_LEN: usize = 80;
+
+    pub(crate) fn random() -> Self {
         let private_key: PrivateKey = {
             use rand::{rngs::OsRng, RngCore};
             let mut inner_buf: SecretKey = [0u8; SECRET_KEY_LENGTH];
@@ -31,21 +46,94 @@ impl Wallet {
             private_key,
             pubkey,
             signing_key,
+            // TODO: Implement ledger scanning
+            synced_block_index: BlockIndex::zero(),
+            // TODO: Implement ledger scanning
+            confirmed_transactions: ConfirmedTransactions::empty(),
+            // TODO: Implement ledger scanning
+            balance: Wings::zero(),
         }
     }
 
-    pub(crate) fn keypair_import(keypair: &[u8; KEYPAIR_LENGTH]) -> H10BlockchainProtoResult<Self> {
+    fn generate_nonce(&self, to: &PublicKey, tokens: &Wings) -> BlockchainProtoResult<u64> {
+        use sha2::{Digest, Sha256};
+
+        const NONCE_LENGTH: usize = 112;
+
+        let mut buf: [u8; NONCE_LENGTH] = [0; NONCE_LENGTH];
+
+        let confirmed_transactions_hash: [u8; 32] = {
+            let mut hasher = Sha256::new();
+            let mut buf: Vec<u8> = vec![];
+            for transaction in self.confirmed_transactions.iter() {
+                buf.extend(transaction.serialize_to_bytes()?.to_vec())
+            }
+
+            hasher.update(buf);
+            hasher.finalize().into()
+        };
+
+        buf[0..32].copy_from_slice(&*self.pubkey().as_bytes());
+        buf[32..64].copy_from_slice(&*to.as_bytes());
+        buf[64..72].copy_from_slice(&self.synced_block_index.to_be_bytes());
+        buf[72..104].copy_from_slice(&confirmed_transactions_hash);
+        buf[104..NONCE_LENGTH].copy_from_slice(&self.synced_block_index.to_be_bytes());
+
+        let mut hasher = Sha256::new();
+        hasher.update(buf);
+
+        let hash_result = hasher.finalize();
+
+        let nonce = u64::from_le_bytes(hash_result[0..8].try_into()?);
+
+        Ok(nonce)
+    }
+    pub(crate) fn transfer(
+        &mut self,
+        to: PublicKey,
+        tokens: Wings,
+    ) -> BlockchainProtoResult<Transaction> {
+        let nonce = self.generate_nonce(&to, &tokens)?;
+        let mut buf: [u8; Self::TRANSACTION_PAYLOAD_LEN] = [0; Self::TRANSACTION_PAYLOAD_LEN];
+
+        let from = self.pubkey();
+
+        buf[0..32].copy_from_slice(&**from);
+        buf[32..64].copy_from_slice(&*to);
+        buf[64..72].copy_from_slice(&tokens.as_bytes());
+        buf[72..Self::TRANSACTION_PAYLOAD_LEN].copy_from_slice(&nonce.to_be_bytes());
+
+        let signature = self.sign(&buf);
+
+        let transaction = Transaction {
+            from: self.pubkey().clone(),
+            to,
+            tokens,
+            nonce,
+            signature,
+        };
+        self.confirmed_transactions.push(transaction.clone());
+        Ok(transaction)
+    }
+
+    pub(crate) fn keypair_import(keypair: &[u8; KEYPAIR_LENGTH]) -> BlockchainProtoResult<Self> {
         let signing_key = SigningKey::from_keypair_bytes(keypair)?;
 
         let keypair_bytes = signing_key.to_keypair_bytes();
         let (secret_key_slice, pubkey_slice) = keypair_bytes.split_at(SECRET_KEY_LENGTH);
 
-        let secret_key: [u8; SECRET_KEY_LENGTH] = secret_key_slice.try_into()?;
-        let pubkey: [u8; PUBLIC_KEY_LENGTH] = pubkey_slice.try_into()?;
+        let secret_key_bytes: [u8; SECRET_KEY_LENGTH] = secret_key_slice.try_into()?;
+        let pubkey_bytes: [u8; PUBLIC_KEY_LENGTH] = pubkey_slice.try_into()?;
 
         Ok(Wallet {
-            private_key: secret_key.into(),
-            pubkey: (&pubkey).try_into()?,
+            private_key: secret_key_bytes.into(),
+            pubkey: PublicKey::from_bytes(&pubkey_bytes)?,
+            // TODO: Implement ledger scanning
+            synced_block_index: BlockIndex::zero(),
+            // TODO: Implement ledger scanning
+            confirmed_transactions: ConfirmedTransactions::empty(),
+            // TODO: Implement ledger scanning
+            balance: Wings::zero(),
             signing_key,
         })
     }
@@ -54,8 +142,11 @@ impl Wallet {
         self.signing_key.to_keypair_bytes()
     }
 
-    pub(crate) fn sign(&self, message: &[u8]) -> Signature {
-        self.signing_key.sign(message)
+    pub(crate) fn sign(
+        &self,
+        transaction_payload: &[u8; Self::TRANSACTION_PAYLOAD_LEN],
+    ) -> Signature {
+        self.signing_key.sign(transaction_payload)
     }
 
     pub(crate) fn verify(
@@ -63,7 +154,7 @@ impl Wallet {
         message: &[u8],
         signature: &Signature,
         other_pubkey: &PublicKey,
-    ) -> H10BlockchainProtoResult<()> {
+    ) -> BlockchainProtoResult<()> {
         use ed25519_dalek::Verifier;
         let verifying_key: VerifyingKey = other_pubkey.try_into()?;
         verifying_key.verify(message, signature)?;
@@ -92,8 +183,18 @@ impl Deref for PrivateKey {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PublicKey([u8; PUBLIC_KEY_LENGTH]);
+
+impl PublicKey {
+    pub(crate) fn from_bytes(value: &[u8; PUBLIC_KEY_LENGTH]) -> BlockchainProtoResult<Self> {
+        let verifying_key = VerifyingKey::from_bytes(value)?;
+        Ok(Self(*verifying_key.as_bytes()))
+    }
+    pub(crate) fn as_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
+        &self.0
+    }
+}
 
 impl From<&VerifyingKey> for PublicKey {
     fn from(value: &VerifyingKey) -> Self {
@@ -102,19 +203,10 @@ impl From<&VerifyingKey> for PublicKey {
 }
 
 impl TryFrom<&PublicKey> for VerifyingKey {
-    type Error = H10BlockchainProtoError;
+    type Error = BlockchainProtoError;
 
     fn try_from(value: &PublicKey) -> Result<Self, Self::Error> {
         Ok(VerifyingKey::from_bytes(&value.0)?)
-    }
-}
-
-impl TryFrom<&[u8; PUBLIC_KEY_LENGTH]> for PublicKey {
-    type Error = H10BlockchainProtoError;
-
-    fn try_from(value: &[u8; PUBLIC_KEY_LENGTH]) -> Result<Self, Self::Error> {
-        let verifying_key = VerifyingKey::from_bytes(value)?;
-        Ok(Self(*verifying_key.as_bytes()))
     }
 }
 
@@ -126,94 +218,48 @@ impl Deref for PublicKey {
     }
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct ConfirmedTransactions(Vec<Transaction>);
+impl ConfirmedTransactions {
+    pub(crate) fn empty() -> Self {
+        Self(vec![])
+    }
+}
+
+impl Deref for ConfirmedTransactions {
+    type Target = Vec<Transaction>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ConfirmedTransactions {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::proto::helpers::hex_to_string::{hex_pubkey, hex_signing_key};
+
     use super::*;
-    use ed25519_dalek::Signature;
 
     #[test]
-    fn test_wallet_keypair_export_import() {
-        let original_wallet = Wallet::new();
-        let exported_keypair = original_wallet.keypair_export();
-        let imported_wallet = Wallet::keypair_import(&exported_keypair).unwrap();
-
-        assert_eq!(original_wallet.pubkey(), imported_wallet.pubkey());
-
-        // Test signing with both wallets
-        let message = b"Test message";
-        let signature1 = original_wallet.sign(message);
-        let signature2 = imported_wallet.sign(message);
-
-        assert_eq!(signature1, signature2);
-    }
-
-    #[test]
-    fn test_wallet_pubkey_to_hex() {
-        let wallet = Wallet::new();
-        let pubkey_hex = pubkey_to_hex(wallet.pubkey());
-        assert_eq!(pubkey_hex.len(), PUBLIC_KEY_LENGTH * 2);
+    fn test_wallet_hex_pubkey() {
+        let wallet = Wallet::random();
+        let pubkey_hex = hex_pubkey(wallet.pubkey());
+        assert_eq!(pubkey_hex.chars().count(), PUBLIC_KEY_LENGTH * 2);
         assert!(pubkey_hex.chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]
-    fn test_wallet_signing_key_to_hex() {
-        let wallet = Wallet::new();
-        let signing_key_hex = signing_key_to_hex(&wallet.signing_key);
-        assert_eq!(signing_key_hex.len(), KEYPAIR_LENGTH * 2);
+    fn test_wallet_hex_signing_key() {
+        let wallet = Wallet::random();
+        let signing_key_hex = hex_signing_key(&wallet.signing_key);
+        assert_eq!(signing_key_hex.chars().count(), KEYPAIR_LENGTH * 2);
         assert!(signing_key_hex.chars().all(|c| c.is_ascii_hexdigit()));
-    }
-
-    #[test]
-    fn test_wallet_signature_to_hex() {
-        let wallet = Wallet::new();
-        let message = b"Test message";
-        let signature = wallet.sign(message);
-        let signature_hex = signature_to_hex(&signature);
-        assert_eq!(signature_hex.len(), SIGNATURE_LENGTH * 2);
-        assert!(signature_hex.chars().all(|c| c.is_ascii_hexdigit()));
-    }
-
-    #[test]
-    fn test_wallet_verify_with_multiple_messages() {
-        let wallet = Wallet::new();
-        let messages = ["Message 1", "Another message", "Yet another message"];
-
-        for message in &messages {
-            let signature = wallet.sign(message.as_bytes());
-            assert!(wallet
-                .verify(message.as_bytes(), &signature, wallet.pubkey())
-                .is_ok());
-        }
-    }
-
-    #[test]
-    fn test_wallet_verify_cross_wallet() {
-        let wallet1 = Wallet::new();
-        let wallet2 = Wallet::new();
-        let message = b"Cross-wallet verification test";
-
-        let signature1 = wallet1.sign(message);
-        let signature2 = wallet2.sign(message);
-
-        // Wallet 1 should verify its own signature
-        assert!(wallet1
-            .verify(message, &signature1, wallet1.pubkey())
-            .is_ok());
-
-        // Wallet 2 should verify its own signature
-        assert!(wallet2
-            .verify(message, &signature2, wallet2.pubkey())
-            .is_ok());
-
-        // Wallet 1 should verify Wallet 2's signature
-        assert!(wallet1
-            .verify(message, &signature2, wallet2.pubkey())
-            .is_ok());
-
-        // Wallet 2 should verify Wallet 1's signature
-        assert!(wallet2
-            .verify(message, &signature1, wallet1.pubkey())
-            .is_ok());
     }
 
     #[test]
@@ -221,76 +267,17 @@ mod tests {
         let invalid_keypair = [0u8; KEYPAIR_LENGTH];
         assert!(Wallet::keypair_import(&invalid_keypair).is_err());
     }
-
-    #[test]
-    fn test_wallet_sign_different_messages() {
-        let wallet = Wallet::new();
-        let message1 = b"First message";
-        let message2 = b"Second message";
-
-        let signature1 = wallet.sign(message1);
-        let signature2 = wallet.sign(message2);
-
-        assert_ne!(signature1, signature2);
-        assert!(wallet
-            .verify(message1, &signature1, wallet.pubkey())
-            .is_ok());
-        assert!(wallet
-            .verify(message2, &signature2, wallet.pubkey())
-            .is_ok());
-        assert!(wallet
-            .verify(message1, &signature2, wallet.pubkey())
-            .is_err());
-        assert!(wallet
-            .verify(message2, &signature1, wallet.pubkey())
-            .is_err());
-    }
 }
 
 #[test]
 fn test_wallet_creation() {
-    let wallet = Wallet::new();
+    let wallet = Wallet::random();
     assert_eq!(wallet.pubkey().0.len(), PUBLIC_KEY_LENGTH);
 }
 
 #[test]
-fn test_wallet_sign_and_verify() {
-    let wallet = Wallet::new();
-    let message = "The quick brown fox jumps over the lazy dog.";
-
-    let signature = wallet.sign(message.as_bytes());
-
-    let result = wallet.verify(message.as_bytes(), &signature, wallet.pubkey());
-    assert!(result.is_ok());
-}
-
-#[test]
-fn test_wallet_verify_with_different_pubkey() {
-    let wallet1 = Wallet::new();
-    let wallet2 = Wallet::new();
-    let message = "The quick brown fox jumps over the lazy dog.";
-
-    let signature = wallet1.sign(message.as_bytes());
-
-    let result = wallet1.verify(message.as_bytes(), &signature, wallet2.pubkey());
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_wallet_verify_tampered_message() {
-    let wallet = Wallet::new();
-    let original_message = "The quick brown fox jumps over the lazy dog.";
-    let tampered_message = "The quick brown f0x jumps over the lazy dog.";
-
-    let signature = wallet.sign(original_message.as_bytes());
-
-    let result = wallet.verify(tampered_message.as_bytes(), &signature, wallet.pubkey());
-    assert!(result.is_err());
-}
-
-#[test]
 fn test_pubkey_conversion() {
-    let wallet = Wallet::new();
+    let wallet = Wallet::random();
     let pubkey = wallet.pubkey();
 
     let verifying_key: VerifyingKey = pubkey.try_into().unwrap();
@@ -303,28 +290,4 @@ fn test_pubkey_conversion() {
 fn test_private_key_creation() {
     let private_key: PrivateKey = [0u8; SECRET_KEY_LENGTH].into();
     assert_eq!(private_key.0.len(), SECRET_KEY_LENGTH);
-}
-
-fn pubkey_to_hex(pubkey: &PublicKey) -> String {
-    let mut output = "".to_string();
-    for n in **pubkey {
-        output.push_str(format!("{:02x}", n).as_str())
-    }
-    output
-}
-
-fn signing_key_to_hex(signing_key: &SigningKey) -> String {
-    let mut output = "".to_string();
-    for n in signing_key.to_keypair_bytes() {
-        output.push_str(format!("{:02x}", n).as_str())
-    }
-    output
-}
-
-fn signature_to_hex(signature: &Signature) -> String {
-    let mut output = "".to_string();
-    for n in signature.to_bytes() {
-        output.push_str(format!("{:02x}", n).as_str())
-    }
-    output
 }

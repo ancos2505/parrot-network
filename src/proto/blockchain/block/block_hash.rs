@@ -1,21 +1,35 @@
-use serde::{Deserialize, Serialize};
+use std::ops::Deref;
 
-use super::{BlockIndex, BlockNonce, BlockPayload, BlockTimestamp};
+use crate::proto::blockchain::{result::BlockchainProtoResult, traits::Serializable};
 
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
-pub(crate) struct BlockHash([u8; 32]);
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct BlockHash([u8; Self::PAYLOAD_LEN]);
 
-impl From<[u8; 32]> for BlockHash {
-    fn from(value: [u8; 32]) -> Self {
-        Self(value)
+impl BlockHash {
+    pub(crate) const PAYLOAD_LEN: usize = 32;
+
+    pub(crate) const fn zero() -> Self {
+        Self([0; Self::PAYLOAD_LEN])
+    }
+
+    pub(crate) fn new(hash: [u8; Self::PAYLOAD_LEN]) -> Self {
+        Self(hash)
     }
 }
 
-impl BlockHash {
-    pub(crate) fn get(&self) -> &[u8; 32] {
+impl Deref for BlockHash {
+    type Target = [u8; Self::PAYLOAD_LEN];
+
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
-    pub(crate) fn zero() -> Self {
-        Self([0; 32])
+}
+
+impl Serializable<32> for BlockHash {
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+        Ok(self.0)
+    }
+    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+        Ok(Self(bytes))
     }
 }

@@ -1,6 +1,9 @@
-pub(crate) const BLOCK_PAYLOAD_LEN: usize = if cfg!(debug_assertions) {
-    u8::MAX as usize + 1
-} else {
-    // 1024 * 1024 // 1 MByte
-    u16::MAX as usize + 1 // 64 KBytes
-};
+use ed25519_dalek::KEYPAIR_LENGTH;
+
+#[cfg(debug_assertions)]
+pub(crate) const DEV_TEST_WALLET_KEYPAIR: [u8; KEYPAIR_LENGTH] = [
+    220, 116, 147, 75, 98, 35, 13, 68, 10, 29, 85, 38, 145, 221, 122, 231, 147, 101, 135, 95, 57,
+    113, 141, 140, 249, 84, 72, 29, 241, 146, 118, 114, 218, 155, 117, 254, 29, 70, 2, 11, 31, 24,
+    233, 70, 252, 111, 242, 230, 29, 68, 23, 75, 156, 68, 123, 43, 38, 125, 78, 160, 232, 122, 204,
+    230,
+];

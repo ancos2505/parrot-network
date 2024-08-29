@@ -41,17 +41,21 @@ fn smain() -> ServerResult<()> {
     CLI_ARGS.get_or_init(|| cli);
 
     thread::spawn(|| -> ServerResult<()> {
-        let mut db = ParrotDb::open()?;
         let mut genesis_block = Block::genesis_block()?;
         println!("Db: Genesis Block to before mining: {:?}", &genesis_block);
+        println!("\n\n\n\n");
         genesis_block.mine()?;
 
+        genesis_block.verify()?;
+
+        let mut db = ParrotDb::open()?;
         println!("Db: Genesis Block mined to be saved: {:?}", &genesis_block);
-        let id = db.save_block(genesis_block)?;
+        let id = db.save_block(&genesis_block)?;
 
-        let loaded_block = db.get_block(id)?;
-        println!("Db: Genesis Block loaded.: {:?}", &loaded_block);
+        let retrieved_block = db.get_block(id)?;
+        println!("Db: Genesis Block retrieved.: {:?}", &retrieved_block);
 
+        assert_eq!(&genesis_block, &retrieved_block);
         Ok(())
     });
     sleep(Duration::from_millis(50));

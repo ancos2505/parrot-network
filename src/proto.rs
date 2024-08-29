@@ -1,2 +1,2 @@
 pub(crate) mod blockchain;
-mod helpers;
+pub(crate) mod helpers;

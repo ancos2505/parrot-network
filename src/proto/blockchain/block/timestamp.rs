@@ -1,10 +1,8 @@
 use std::ops::Deref;
 
-use serde::{Deserialize, Serialize};
+use crate::proto::blockchain::{result::BlockchainProtoResult, traits::Serializable};
 
-use crate::node::webui::ServerResult;
-
-#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct BlockTimestamp(u32);
 
 impl Deref for BlockTimestamp {
@@ -16,11 +14,25 @@ impl Deref for BlockTimestamp {
 }
 
 impl BlockTimestamp {
-    pub(crate) fn now() -> ServerResult<Self> {
+    pub(crate) const PAYLOAD_LEN: usize = 4;
+
+    pub(crate) const fn genesis() -> Self {
+        Self(1725000000)
+    }
+    pub(crate) fn now() -> BlockchainProtoResult<Self> {
         use std::time::SystemTime;
         let now = SystemTime::now();
         let now_unix_epoch = now.duration_since(SystemTime::UNIX_EPOCH)?;
 
         Ok(Self(now_unix_epoch.as_secs().try_into()?))
+    }
+}
+
+impl Serializable<4> for BlockTimestamp {
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+        Ok(self.0.to_be_bytes())
+    }
+    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+        Ok(Self(u32::from_be_bytes(bytes)))
     }
 }

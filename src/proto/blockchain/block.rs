@@ -225,7 +225,7 @@ impl Serializable for Block {
         const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
 
         let nonce =
-            BlockNonce::deserialize_from_bytes(bytes[TRANSACTIONS_END..TIMESTAMP_END].try_into()?)?;
+            BlockNonce::deserialize_from_bytes(bytes[TIMESTAMP_END..NONCE_END].try_into()?)?;
 
         const CURRENT_END: usize = NONCE_END + size_of::<BlockHash>();
 
@@ -324,18 +324,17 @@ mod tests {
         assert_eq!(*block.index, u64::MAX);
     }
     #[test]
-    fn test_serializable_trait_impl() -> BlockchainProtoResult<()> {
-        let mut genesis_block = Block::genesis_block()?;
+    fn test_serializable_trait_impl() {
+        let mut genesis_block = Block::genesis_block().unwrap();
 
-        genesis_block.mine()?;
+        genesis_block.mine().unwrap();
 
-        genesis_block.verify()?;
+        genesis_block.verify().unwrap();
 
-        let bytes = genesis_block.serialize_to_bytes()?;
+        let bytes = genesis_block.serialize_to_bytes().unwrap();
 
-        let deserialized_block = Block::deserialize_from_bytes(bytes)?;
+        let deserialized_block = Block::deserialize_from_bytes(bytes).unwrap();
 
         assert_eq!(&genesis_block, &deserialized_block);
-        Ok(())
     }
 }

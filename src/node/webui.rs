@@ -16,19 +16,15 @@ use h10::http::{
     status_code::StatusCode,
 };
 
-use crate::{CLI_ARGS, HTTP10_STRICT_MODE, MAX_ACTIVE_SESSIONS};
+use crate::{HTTP10_STRICT_MODE, MAX_ACTIVE_SESSIONS, NODE_CONFIG};
 
 use crate::node::log::LogLevel;
 
 use self::pages::Endpoint;
 
-pub(crate) use crate::node::{
-    cli::Cli,
-    result::{ServerError, ServerResult},
-    traits::IntoResponse,
-};
+pub(crate) use crate::node::{cli::Cli, traits::IntoResponse};
 
-use super::constants::MAX_HTTP_MESSAGE_LENGTH;
+use super::{constants::MAX_HTTP_MESSAGE_LENGTH, server::result::ServerResult, NodeConfig};
 
 pub(crate) struct WebuiResponse(Response);
 impl WebuiResponse {
@@ -36,13 +32,13 @@ impl WebuiResponse {
         if HTTP10_STRICT_MODE.get().is_some() {
             Self(Response::new(status))
         } else {
-            Self(Response::new(status).header(Connection::default()))
+            Self(Response::new(status).add_header(Connection::default()))
         }
     }
-    pub(crate) fn header<H: IntoHeader>(self, header: H) -> Self {
-        Self(self.0.header(header))
+    pub(crate) fn add_header<H: IntoHeader>(self, header: H) -> Self {
+        Self(self.0.add_header(header))
     }
-    pub(crate) fn body<B: ToString>(self, body: B) -> Self {
+    pub(crate) fn body<B: AsRef<str>>(self, body: B) -> Self {
         Self(self.0.body(body))
     }
 }
@@ -57,14 +53,15 @@ pub(crate) struct WebuiServer;
 impl WebuiServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
-    fn listener(cli_data: &Cli) -> String {
-        format!("{}:{}", cli_data.webui_ip, cli_data.webui_port)
+    fn listener(node_config: &NodeConfig) -> String {
+        let cli = node_config.cli();
+        format!("{}:{}", cli.webui_ip(), cli.webui_port())
     }
     pub(crate) fn run() -> ServerResult<()> {
-        if let Some(cli) = CLI_ARGS.get() {
+        if let Some(node_config) = NODE_CONFIG.get() {
             let mut active_sessions = Arc::new(Mutex::new(0));
 
-            let list_str = Self::listener(cli);
+            let list_str = Self::listener(node_config);
             let listener = TcpListener::bind(&list_str)?;
             // let listener = TcpListener::bind(&list_str)?;
 
@@ -180,8 +177,8 @@ impl WebuiServer {
         let mut buf = [0u8; Self::CHUNK_SIZE];
         match stream.read(&mut buf) {
             Ok(bytes) => {
-                if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose {
+                if let Some(node_config) = NODE_CONFIG.get() {
+                    if node_config.cli().verbose() {
                         println!("Request received: {bytes} Bytes.");
                     }
                 }
@@ -215,8 +212,8 @@ impl WebuiServer {
         let response_str = server_response.into_response().to_string();
         match stream.write(response_str.as_bytes()) {
             Ok(bytes) => {
-                if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose {
+                if let Some(node_config) = NODE_CONFIG.get() {
+                    if node_config.cli().verbose() {
                         println!("Response sent: {bytes} Bytes.");
                         println!("{response_str}");
                     } else {

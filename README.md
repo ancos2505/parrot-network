@@ -40,7 +40,7 @@ Options:
 
 #### Terminal 1
 ```
-cargo run
+cargo run -- --config-file=./misc/parrot-node.toml
 ```
 #### Terminal 2
 ```

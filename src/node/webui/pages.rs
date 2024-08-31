@@ -4,7 +4,7 @@ mod styles_css;
 
 use h10::http::request::Request;
 
-use crate::CLI_ARGS;
+use crate::NODE_CONFIG;
 
 use super::WebuiResponse;
 
@@ -19,8 +19,8 @@ impl Endpoint {
         let request = match Request::parse(raw_request) {
             Ok(req) => req,
             Err(err) => {
-                if let Some(cli) = CLI_ARGS.get() {
-                    if cli.verbose {
+                if let Some(node_config) = NODE_CONFIG.get() {
+                    if node_config.cli().verbose() {
                         eprintln!("Error: {err}");
                     }
                 }

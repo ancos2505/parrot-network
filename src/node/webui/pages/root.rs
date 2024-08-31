@@ -22,7 +22,7 @@ pub(crate) fn root(request: Request) -> H10LibResult<WebuiResponse> {
             "counter" => {
                 let _ = ROOT_PAGER_COUNTER.fetch_add(1, Ordering::SeqCst);
                 return Ok(WebuiResponse::new(StatusCode::MovedTemporarily)
-                    .header(Location::from_str("/")?));
+                    .add_header(Location::from_str("/")?));
             }
             _ => (),
         }
@@ -88,9 +88,9 @@ pub(crate) fn root(request: Request) -> H10LibResult<WebuiResponse> {
     println!("{html:?}");
 
     Ok(WebuiResponse::new(StatusCode::OK)
-        .header(ContentType::html())
-        .header(Date::now()?)
-        .header(Server::default())
-        .header(Pragma::default())
-        .body(html))
+        .add_header(ContentType::html())
+        .add_header(Date::now()?)
+        .add_header(Server::default())
+        .add_header(Pragma::default())
+        .body(html.to_string()))
 }

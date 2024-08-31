@@ -1,16 +1,13 @@
-use crate::{
-    node::webui::ServerResult,
-    proto::{
-        blockchain::{
-            block::{Block, BlockIndex},
-            traits::Serializable,
-        },
-        // helpers::hex_to_string::hex_slice,
+use crate::proto::{
+    blockchain::{
+        block::{Block, BlockIndex},
+        traits::Serializable,
     },
+    // helpers::hex_to_string::hex_slice,
 };
 use redb::{Database, ReadableTable, TableDefinition};
 
-use super::webui::ServerError;
+use super::server::result::{ServerError, ServerResult};
 
 const TABLE: TableDefinition<'_, u64, [u8; Block::PAYLOAD_LEN]> = TableDefinition::new("ledger");
 const DB_FILE_PATH: &str = "parrot-ledger.redb";

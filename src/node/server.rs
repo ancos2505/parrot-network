@@ -1,12 +1,11 @@
+mod api;
 mod endpoints;
+pub mod result;
 
 use std::{
     collections::BTreeMap,
-    fmt::Display,
-    fs::File,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
-    os::unix::fs::MetadataExt,
     sync::{Arc, Mutex},
     thread::{self},
     time::Instant,
@@ -18,21 +17,15 @@ use h10::http::{
     result::{H10LibError, H10LibResult},
     status_code::StatusCode,
 };
-use serde::Deserialize;
-
-use crate::{CLI_ARGS, HTTP10_STRICT_MODE, MAX_ACTIVE_SESSIONS};
 
 use crate::node::log::LogLevel;
+use crate::{HTTP10_STRICT_MODE, MAX_ACTIVE_SESSIONS, NODE_CONFIG};
 
-use self::endpoints::Endpoint;
+use super::{constants::MAX_HTTP_MESSAGE_LENGTH, NodeConfig};
 
-pub(crate) use crate::node::{
-    cli::Cli,
-    result::{ServerError, ServerResult},
-    traits::IntoResponse,
-};
+use self::{endpoints::Endpoint, result::ServerResult};
 
-use super::constants::MAX_HTTP_MESSAGE_LENGTH;
+pub(crate) use crate::node::traits::IntoResponse;
 
 pub(crate) struct ServerResponse(Response);
 impl ServerResponse {
@@ -40,13 +33,13 @@ impl ServerResponse {
         if HTTP10_STRICT_MODE.get().is_some() {
             Self(Response::new(status))
         } else {
-            Self(Response::new(status).header(Connection::default()))
+            Self(Response::new(status).add_header(Connection::default()))
         }
     }
-    pub(crate) fn header<H: IntoHeader>(self, header: H) -> Self {
-        Self(self.0.header(header))
+    pub(crate) fn add_header<H: IntoHeader>(self, header: H) -> Self {
+        Self(self.0.add_header(header))
     }
-    pub(crate) fn body<B: ToString>(self, body: B) -> Self {
+    pub(crate) fn body<B: AsRef<str>>(self, body: B) -> Self {
         Self(self.0.body(body))
     }
 }
@@ -61,32 +54,14 @@ pub(crate) struct NodeServer;
 impl NodeServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
-    fn get_config(cli: &Cli) -> ServerResult<Config> {
-        let mut toml_str = "".to_string();
-        let config_file = &cli.config_file;
-        let mut file = File::open(&config_file)
-            .map_err(|_| ServerError::Custom(format!("Config file not found `{config_file}`.")))?;
-        let metadata = file.metadata()?;
-
-        if metadata.size() > 1024 * 1024 {
-            return Err(ServerError::Custom(
-                "Server config file is larger than 1MByte.".into(),
-            ));
-        }
-
-        file.read_to_string(&mut toml_str)?;
-        Ok(toml::from_str(&toml_str)?)
-    }
-    fn listener(server_config: &Config) -> String {
-        format!("{}", server_config.server)
+    fn listener(server_config: &NodeConfig) -> String {
+        format!("{}", server_config.toml().server())
     }
     pub(crate) fn run() -> ServerResult<()> {
-        if let Some(cli) = CLI_ARGS.get() {
-            let server_config = Self::get_config(cli)?;
-
+        if let Some(node_config) = NODE_CONFIG.get() {
             let mut active_sessions = Arc::new(Mutex::new(0));
 
-            let list_str = Self::listener(&server_config);
+            let list_str = Self::listener(node_config);
             let listener = TcpListener::bind(&list_str)?;
             // let listener = TcpListener::bind(&list_str)?;
 
@@ -202,8 +177,9 @@ impl NodeServer {
         let mut buf = [0u8; Self::CHUNK_SIZE];
         match stream.read(&mut buf) {
             Ok(bytes) => {
-                if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose {
+                if let Some(node_config) = NODE_CONFIG.get() {
+                    let cli = node_config.cli();
+                    if cli.verbose() {
                         println!("Request received: {bytes} Bytes.");
                     }
                 }
@@ -237,8 +213,9 @@ impl NodeServer {
         let response_str = server_response.into_response().to_string();
         match stream.write(response_str.as_bytes()) {
             Ok(bytes) => {
-                if let Some(cli_data) = CLI_ARGS.get() {
-                    if cli_data.verbose {
+                if let Some(node_config) = NODE_CONFIG.get() {
+                    let cli = node_config.cli();
+                    if cli.verbose() {
                         println!("Response sent: {bytes} Bytes.");
                         println!("{response_str}");
                     } else {
@@ -249,37 +226,5 @@ impl NodeServer {
             Err(e) => println!("Failed sending response: {}", e),
         }
         Ok(())
-    }
-}
-
-#[derive(Debug, Deserialize)]
-struct Config {
-    // global_string: Option<String>,
-    // global_integer: Option<u64>,
-    server: ServerConfig,
-    peers: Option<Vec<PeerConfig>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ServerConfig {
-    ip: String,
-    port: u16,
-}
-
-impl Display for ServerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.ip, self.port)
-    }
-}
-
-#[derive(Debug, Deserialize)]
-struct PeerConfig {
-    ip: String,
-    port: u16,
-}
-
-impl Display for PeerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.ip, self.port)
     }
 }

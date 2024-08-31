@@ -10,9 +10,9 @@ pub(crate) fn styles_css() -> H10LibResult<WebuiResponse> {
     let css = include_str!("../../../../assets/styles.css");
 
     Ok(WebuiResponse::new(StatusCode::OK)
-        .header(ContentType::css())
-        .header(Date::now()?)
-        .header(Server::default())
-        .header(Pragma::default())
+        .add_header(ContentType::css())
+        .add_header(Date::now()?)
+        .add_header(Server::default())
+        .add_header(Pragma::default())
         .body(css))
 }

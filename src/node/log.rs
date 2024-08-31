@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::node::result::ServerError;
+use super::server::result::ServerError;
 
 #[derive(Debug)]
 pub(crate) enum LogLevel {

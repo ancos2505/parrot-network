@@ -9,12 +9,13 @@ use std::{
 };
 
 use clap::Parser;
+use node::{server::result::ServerResult, NodeConfig};
 use proto::blockchain::block::Block;
 
 use self::node::{
     db::ParrotDb,
     server::NodeServer,
-    webui::{Cli, ServerResult, WebuiServer},
+    webui::{Cli, WebuiServer},
 };
 
 // Unsafe
@@ -22,7 +23,7 @@ static ROOT_PAGER_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
 static HTTP10_STRICT_MODE: OnceLock<bool> = OnceLock::new();
 
-static CLI_ARGS: OnceLock<Cli> = OnceLock::new();
+static NODE_CONFIG: OnceLock<NodeConfig> = OnceLock::new();
 
 pub(crate) const MAX_ACTIVE_SESSIONS: usize = 5_000;
 
@@ -38,7 +39,10 @@ fn main() -> ExitCode {
 
 fn smain() -> ServerResult<()> {
     let cli = Cli::parse();
-    CLI_ARGS.get_or_init(|| cli);
+
+    let node_config = NodeConfig::load(cli)?;
+
+    NODE_CONFIG.get_or_init(|| node_config);
 
     thread::spawn(|| -> ServerResult<()> {
         let mut genesis_block = Block::genesis_block()?;

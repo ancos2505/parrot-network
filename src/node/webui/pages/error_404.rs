@@ -32,8 +32,8 @@ pub(crate) fn error_404() -> H10LibResult<WebuiResponse> {
     println!("{html:?}");
 
     Ok(WebuiResponse::new(StatusCode::NotFound)
-        .header(ContentType::html())
-        .header(Server::default())
-        .header(Pragma::default())
-        .body(html))
+        .add_header(ContentType::html())
+        .add_header(Server::default())
+        .add_header(Pragma::default())
+        .body(html.to_string()))
 }

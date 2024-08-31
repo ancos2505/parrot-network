@@ -25,11 +25,12 @@ impl Deref for BlockIndex {
     }
 }
 
-impl Serializable<8> for BlockIndex {
-    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+impl Serializable for BlockIndex {
+    type Bytes = [u8; Self::PAYLOAD_LEN];
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
         Ok(self.0.to_be_bytes())
     }
-    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+    fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
         Ok(Self(u64::from_be_bytes(bytes)))
     }
 }

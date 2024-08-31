@@ -7,7 +7,7 @@ Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol (WIP
 
 ### Installation
 ```sh
-$ cargo install parrot-network
+$ cargo install --debug parrot-network
 ```
 
 ### Installed mode
@@ -50,6 +50,9 @@ curl -v localhost:9000
 or open webui in your browser: http://localhost:9000/
 
 ![Opened in browser](/docs/imgs/opened_in_browser.png)
+
 ## Roadmap
+- [ ] Deploy DevNet
+- [ ] Implement cli for both node and wallet management
 - [ ] Implement Webui for node management
-- [ ] Implement the complete spec [RFC1945](https://www.rfc-editor.org/rfc/rfc1945.html)
+

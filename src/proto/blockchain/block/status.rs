@@ -20,8 +20,10 @@ impl BlockStatus {
     }
 }
 
-impl Serializable<1> for BlockStatus {
-    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+impl Serializable for BlockStatus {
+    type Bytes = [u8; Self::PAYLOAD_LEN];
+
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
         let arr = match self {
             BlockStatus::NotMined => [0],
             BlockStatus::Mined => [1],
@@ -32,7 +34,7 @@ impl Serializable<1> for BlockStatus {
         Ok(arr)
     }
 
-    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+    fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
         let block_status = match bytes[0] {
             0 => BlockStatus::NotMined,
             1 => BlockStatus::Mined,

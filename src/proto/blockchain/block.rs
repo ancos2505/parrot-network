@@ -27,8 +27,6 @@ pub(crate) struct Block {
     pub current: BlockHash,
 }
 impl Block {
-    const PARTITION_255_TOKENS: u64 = 72340172838076673;
-
     pub(crate) const PAYLOAD_LEN: usize = BlockStatus::PAYLOAD_LEN
         + BlockHash::PAYLOAD_LEN
         + BlockIndex::PAYLOAD_LEN
@@ -36,6 +34,8 @@ impl Block {
         + BlockTimestamp::PAYLOAD_LEN
         + BlockNonce::PAYLOAD_LEN
         + BlockHash::PAYLOAD_LEN;
+
+    const PARTITION_255_TOKENS: u64 = 72340172838076673;
 
     const PAYLOAD_TO_MINING_LEN: usize = BlockHash::PAYLOAD_LEN
         + BlockIndex::PAYLOAD_LEN
@@ -147,8 +147,9 @@ impl Block {
     }
 }
 
-impl Serializable<517> for Block {
-    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+impl Serializable for Block {
+    type Bytes = [u8; Self::PAYLOAD_LEN];
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
         let Self {
             status,
             previous,
@@ -195,7 +196,7 @@ impl Serializable<517> for Block {
         Ok(buf)
     }
 
-    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+    fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
         const STATUS_END: usize = size_of::<BlockStatus>();
 
         let status = BlockStatus::deserialize_from_bytes([bytes[0]])?;
@@ -255,7 +256,7 @@ fn is_nonce_found(block_hash: &BlockHash) -> bool {
 #[cfg(not(debug_assertions))]
 fn is_nonce_found(block_hash: &BlockHash) -> bool {
     // const DIFFICULTY: u32 = 0x00_0F_FF_FF_FF;
-    let hash = block_hash.get();
+    let hash = &**block_hash;
     match (hash.get(0), hash.get(1), hash.get(2)) {
         (Some(0), Some(0), Some(0)) => true,
         _ => false,

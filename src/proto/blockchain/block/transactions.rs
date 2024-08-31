@@ -42,8 +42,9 @@ impl BlockTransactions {
     }
 }
 
-impl Serializable<432> for BlockTransactions {
-    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+impl Serializable for BlockTransactions {
+    type Bytes = [u8; Self::PAYLOAD_LEN];
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
         let mut buf = [0; Self::PAYLOAD_LEN];
 
         for (idx_block, transaction) in self.0.iter().enumerate() {
@@ -55,7 +56,7 @@ impl Serializable<432> for BlockTransactions {
         Ok(buf)
     }
 
-    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+    fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
         let mut transactions = vec![];
 
         let rounds = Self::PAYLOAD_LEN / Transaction::PAYLOAD_LEN;

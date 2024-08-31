@@ -29,8 +29,10 @@ impl Transaction {
     pub(crate) const PAYLOAD_LEN: usize = 144;
 }
 
-impl Serializable<144> for Transaction {
-    fn serialize_to_bytes(&self) -> BlockchainProtoResult<[u8; Self::PAYLOAD_LEN]> {
+impl Serializable for Transaction {
+    type Bytes = [u8; Self::PAYLOAD_LEN];
+
+    fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
         let mut buf: [u8; Self::PAYLOAD_LEN] = [0; Self::PAYLOAD_LEN];
         let from: [u8; 32] = *self.from;
         let to: [u8; 32] = *self.to;
@@ -46,7 +48,7 @@ impl Serializable<144> for Transaction {
         Ok(buf)
     }
 
-    fn deserialize_from_bytes(bytes: [u8; Self::PAYLOAD_LEN]) -> BlockchainProtoResult<Self> {
+    fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
         let from = {
             let inner: [u8; PUBLIC_KEY_LENGTH] = bytes[0..32].try_into()?;
             PublicKey::from_bytes(&inner)?

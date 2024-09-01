@@ -255,9 +255,9 @@ dependencies = [
 
 [[package]]
 name = "h10"
-version = "0.6.3"
+version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "163c75c932146b28c5befbe39cc8a94ea19d1e44a7b6865d1742becd33f981b9"
+checksum = "b62bc954648ababe652325ffea4495a081bc1789aa8c99989344d18eb0bc7a15"
 dependencies = [
  "html-rs",
 ]
@@ -310,7 +310,7 @@ checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
 name = "parrot-network"
-version = "0.0.11"
+version = "0.0.12"
 dependencies = [
  "clap",
  "ed25519-dalek",

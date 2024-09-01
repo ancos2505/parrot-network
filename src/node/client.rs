@@ -1,6 +1,8 @@
 mod result;
 
-use h10::http::{request::Request, status_code::StatusCode};
+use h10::http::{
+    method::Method, request::Request, status_code::StatusCode, url_path::UrlPath, version::Version,
+};
 use result::ClientError;
 
 use self::result::ClientResult;
@@ -13,6 +15,7 @@ impl NodeClient {
         Ok(())
     }
 
+    // TODO: Implement Hostname/IP validation
     fn request() -> ClientResult<()> {
         use std::io::Read;
         use std::io::Write;
@@ -22,8 +25,10 @@ impl NodeClient {
         let mut buf: [u8; 1024] = [0; 1024];
         let start = Instant::now();
         let mut stream = TcpStream::connect(&connect_str)?;
-        // let request = Request::
-        stream.write_all(b"GET / HTTP/1.0\r\n\r\n")?;
+        let request = Request::get().path(UrlPath::root()).finish();
+
+        stream.write_all(request.to_string().as_bytes())?;
+
         let num_bytes = stream.read(&mut buf)?;
         // let duration = start.elapsed();
 

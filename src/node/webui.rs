@@ -39,7 +39,7 @@ impl WebuiResponse {
         Self(self.0.add_header(header))
     }
     pub(crate) fn body<B: AsRef<str>>(self, body: B) -> Self {
-        Self(self.0.body(body))
+        Self(self.0.set_body(body))
     }
 }
 
@@ -208,7 +208,7 @@ impl WebuiServer {
                 // dbg!(error);
             }
         };
-        let statuscode_str = server_response.0.status.to_string();
+        let statuscode_str = server_response.0.status().to_string();
         let response_str = server_response.into_response().to_string();
         match stream.write(response_str.as_bytes()) {
             Ok(bytes) => {

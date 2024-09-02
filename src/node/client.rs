@@ -1,10 +1,10 @@
 pub(crate) mod result;
 
-use std::thread;
+use std::{thread, time::Duration};
 
 use h10::{
     client::HttpClient,
-    http::{request::Request, url_path::UrlPath},
+    http::{request::Request, response::parser::ResponseParser, url_path::UrlPath},
 };
 
 use crate::NODE_CONFIG;
@@ -46,8 +46,12 @@ impl NodeClient {
         let request = Request::get().path(UrlPath::root()).finish();
 
         println!("NodeClient: Sending Request:\n{request}");
+        let timeout = Duration::from_secs(5);
 
-        let response = HttpClient::launch(request, peer.to_string())?;
+        let response_str = HttpClient::launch(request, peer.to_string(), timeout)?;
+        
+        let response = ResponseParser::parse(response_str.as_bytes())?;
+        
         let elapsed = start.elapsed().as_secs_f32();
         println!("NodeClient: Response received:\n{response}");
         println!("NodeClient: StatusCode: {}", response.status());

@@ -10,6 +10,7 @@ pub(crate) enum ClientError {
     StdIoError(StdIoError),
     ParseIntError(ParseIntError),
     ParseAsciiHostname(String),
+    NodeSigningKey(String),
     Custom(String),
 }
 
@@ -44,6 +45,7 @@ impl Display for ClientError {
             Self::StdIoError(err) => output.push_str(format!("{err}").as_str()),
             Self::ParseIntError(err) => output.push_str(format!("{err}").as_str()),
             Self::ParseAsciiHostname(err) => output.push_str(format!("{err}").as_str()),
+            Self::NodeSigningKey(err) => output.push_str(format!("{err}").as_str()),
             Self::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)

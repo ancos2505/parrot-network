@@ -19,6 +19,7 @@ use crate::node::{
 };
 
 use clap::Parser;
+use ed25519_dalek::{SecretKey, SECRET_KEY_LENGTH};
 use proto::blockchain::block::Block;
 
 // Unsafe
@@ -43,7 +44,22 @@ fn main() -> ExitCode {
 fn smain() -> ServerResult<()> {
     let cli = Cli::parse();
 
-    let node_config = NodeConfig::load(cli)?;
+    let mut node_config = NodeConfig::load(cli)?;
+
+    // TODO
+    {
+        // if let Some(secret_key_file) = node_config.toml().server().secret_key_file() {}
+
+        let secret_key: SecretKey = {
+            use rand::{rngs::OsRng, RngCore};
+            let mut inner_buf = [0u8; SECRET_KEY_LENGTH];
+            OsRng.fill_bytes(&mut inner_buf);
+            inner_buf
+        }
+        .into();
+
+        node_config.set_secret_key(secret_key);
+    }
 
     NODE_CONFIG.get_or_init(|| node_config);
 

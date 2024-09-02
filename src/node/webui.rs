@@ -25,7 +25,7 @@ pub(crate) use crate::node::{cli::Cli, traits::IntoResponse};
 
 use super::{constants::MAX_HTTP_MESSAGE_LENGTH, NodeConfig};
 
-#[derive(Debug,PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum ClientHandlingOutcome {
     Success(String),
     Failure(String),

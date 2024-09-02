@@ -11,6 +11,7 @@ pub(crate) mod webui;
 use std::{fmt::Display, fs::File, net::IpAddr, str::FromStr};
 
 use client::result::ClientError;
+use ed25519_dalek::SecretKey;
 use serde::{Deserialize, Deserializer};
 
 use self::server::result::{ServerError, ServerResult};
@@ -20,6 +21,7 @@ use self::cli::Cli;
 pub(crate) struct NodeConfig {
     cli: Cli,
     toml: ConfigFromToml,
+    secret_key: Option<SecretKey>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -59,6 +61,8 @@ impl NodeConfig {
         Ok(Self {
             cli: cli,
             toml: toml::from_str(&toml_str)?,
+            // TODO
+            secret_key: None,
         })
     }
 
@@ -69,12 +73,35 @@ impl NodeConfig {
     pub(crate) fn toml(&self) -> &ConfigFromToml {
         &self.toml
     }
+
+    pub(crate) fn secret_key(&self) -> Option<SecretKey> {
+        self.secret_key
+    }
+
+    pub(crate) fn set_secret_key(&mut self, secret_key: SecretKey) {
+        self.secret_key = Some(secret_key);
+    }
 }
 
 #[derive(Debug, Deserialize)]
-struct ServerConfig {
+pub(crate) struct ServerConfig {
+    secret_key_file: Option<String>,
     ip: IpAddr,
     port: u16,
+}
+
+impl ServerConfig {
+    pub(crate) fn secret_key_file(&self) -> Option<&String> {
+        self.secret_key_file.as_ref()
+    }
+
+    pub(crate) fn ip(&self) -> IpAddr {
+        self.ip
+    }
+
+    pub(crate) fn port(&self) -> u16 {
+        self.port
+    }
 }
 
 impl Display for ServerConfig {
@@ -84,7 +111,7 @@ impl Display for ServerConfig {
 }
 
 #[derive(Debug, Deserialize)]
-struct PeerConfig {
+pub(crate) struct PeerConfig {
     #[serde(deserialize_with = "deserialize_ascii_hostname")]
     host: AsciiHostname,
     port: u16,

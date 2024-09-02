@@ -12,16 +12,16 @@ use h10::http::{
     status_code::StatusCode,
 };
 
-use super::WebuiResponse;
+use super::WebUiResponse;
 
 use crate::ROOT_PAGER_COUNTER;
 
-pub(crate) fn root(request: Request) -> H10LibResult<WebuiResponse> {
+pub(crate) fn root(request: Request) -> H10LibResult<WebUiResponse> {
     if let Some(endpoint) = request.query_string.get("endpoint") {
         match &**endpoint.value() {
             "counter" => {
                 let _ = ROOT_PAGER_COUNTER.fetch_add(1, Ordering::SeqCst);
-                return Ok(WebuiResponse::new(StatusCode::MovedTemporarily)
+                return Ok(WebUiResponse::new(StatusCode::MovedTemporarily)
                     .add_header(Location::from_str("/")?));
             }
             _ => (),
@@ -87,7 +87,7 @@ pub(crate) fn root(request: Request) -> H10LibResult<WebuiResponse> {
     #[cfg(feature = "debug")]
     println!("{html:?}");
 
-    Ok(WebuiResponse::new(StatusCode::OK)
+    Ok(WebUiResponse::new(StatusCode::OK)
         .add_header(ContentType::html())
         .add_header(Date::now()?)
         .add_header(Server::default())

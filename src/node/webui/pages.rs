@@ -6,14 +6,14 @@ use h10::http::request::Request;
 
 use crate::NODE_CONFIG;
 
-use super::WebuiResponse;
-
 use self::styles_css::styles_css;
+
+use super::WebUiResponse;
 
 pub(crate) struct Endpoint;
 
 impl Endpoint {
-    pub(crate) fn dispatcher(raw_request: &[u8]) -> WebuiResponse {
+    pub(crate) fn dispatcher(raw_request: &[u8]) -> WebUiResponse {
         use super::pages::{error_404::error_404, root::root};
 
         let request = match Request::parse(raw_request) {
@@ -24,7 +24,7 @@ impl Endpoint {
                         eprintln!("Error: {err}");
                     }
                 }
-                return WebuiResponse::new(err.into());
+                return WebUiResponse::new(err.into());
             }
         };
 
@@ -36,7 +36,7 @@ impl Endpoint {
 
         match res {
             Ok(response) => return response,
-            Err(err) => WebuiResponse::new(err.into()),
+            Err(err) => WebUiResponse::new(err.into()),
         }
     }
 }

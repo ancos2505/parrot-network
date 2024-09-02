@@ -8,9 +8,9 @@ port = 8080
 
 
 [[peers]]
-ip = "node01"
+host = "node01"
 port = 8080
 
 [[peers]]
-ip = "node02"
+host = "node02"
 port = 8080

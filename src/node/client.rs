@@ -1,56 +1,58 @@
-mod result;
+pub(crate) mod result;
 
-use h10::http::{
-    method::Method, request::Request, status_code::StatusCode, url_path::UrlPath, version::Version,
+use std::thread;
+
+use h10::{
+    client::HttpClient,
+    http::{request::Request, url_path::UrlPath},
 };
-use result::ClientError;
+
+use crate::NODE_CONFIG;
 
 use self::result::ClientResult;
+
+use super::PeerConfig;
 
 pub(crate) struct NodeClient;
 
 impl NodeClient {
-    fn run() -> ClientResult<()> {
-        Self::request()?;
+    pub(crate) fn run() -> ClientResult<()> {
+        if let Some(node_config) = NODE_CONFIG.get() {
+            for peer in node_config.toml().peers() {
+                let th_result =
+                    thread::spawn(|| -> ClientResult<()> { Self::request(peer) }).join();
+                match th_result {
+                    Ok(inner_res) => {
+                        if let Err(client_error) = inner_res {
+                            println!("NodeClient: Client error: {client_error:?}");
+                        }
+                    }
+                    Err(err) => {
+                        println!("NodeClient: Internal error: {err:?}");
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
     // TODO: Implement Hostname/IP validation
-    fn request() -> ClientResult<()> {
-        use std::io::Read;
-        use std::io::Write;
-        use std::net::TcpStream;
+    fn request(peer: &PeerConfig) -> ClientResult<()> {
         use std::time::Instant;
-        let connect_str = "localhost:8080";
-        let mut buf: [u8; 1024] = [0; 1024];
+
         let start = Instant::now();
-        let mut stream = TcpStream::connect(&connect_str)?;
+
         let request = Request::get().path(UrlPath::root()).finish();
 
-        stream.write_all(request.to_string().as_bytes())?;
+        println!("NodeClient: Sending Request:\n{request}");
 
-        let num_bytes = stream.read(&mut buf)?;
-        // let duration = start.elapsed();
+        let response = HttpClient::launch(request, peer.to_string())?;
+        let elapsed = start.elapsed().as_secs_f32();
+        println!("NodeClient: Response received:\n{response}");
+        println!("NodeClient: StatusCode: {}", response.status());
+        println!("NodeClient: Response received in {} secs", elapsed);
 
-        let status_code = Self::get_status_code(&buf[..num_bytes])?;
-
-        println!("Status: {}", status_code);
         Ok(())
-    }
-
-    fn get_status_code(response: &[u8]) -> ClientResult<StatusCode> {
-        let mut lines = response.split(|&b| b == b'\n');
-        if let Some(status_line) = lines.next() {
-            let response_str = String::from_utf8_lossy(status_line);
-            if let Some(status_line) = response_str.split("\r\n").next() {
-                if let Some(code_str) = status_line.split(" ").nth(1) {
-                    let code = code_str.parse::<u16>()?;
-                    return Ok(code.try_into()?);
-                }
-            }
-        }
-        Err(ClientError::custom(
-            "Not found payload for StatusCode parsing",
-        ))
     }
 }

@@ -8,15 +8,18 @@ use std::{
     time::Duration,
 };
 
-use clap::Parser;
-use node::{server::result::ServerResult, NodeConfig};
-use proto::blockchain::block::Block;
-
-use self::node::{
+use crate::node::{
+    client::{result::ClientResult, NodeClient},
     db::ParrotDb,
+    server::result::ServerResult,
     server::NodeServer,
-    webui::{Cli, WebuiServer},
+    webui::Cli,
+    webui::{result::WebUiResult, WebUiServer},
+    NodeConfig,
 };
+
+use clap::Parser;
+use proto::blockchain::block::Block;
 
 // Unsafe
 static ROOT_PAGER_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -44,7 +47,9 @@ fn smain() -> ServerResult<()> {
 
     NODE_CONFIG.get_or_init(|| node_config);
 
-    thread::spawn(|| -> ServerResult<()> {
+    let th_genesis_block = thread::spawn(|| -> ServerResult<()> {
+        // TODO: WIP.
+        // TODO: In the future must be pre-generated.
         let mut genesis_block = Block::genesis_block()?;
         println!("Db: Genesis Block to before mining: {:?}", &genesis_block);
         println!("\n\n\n\n");
@@ -62,9 +67,18 @@ fn smain() -> ServerResult<()> {
         assert_eq!(&genesis_block, &retrieved_block);
         Ok(())
     });
-    sleep(Duration::from_millis(50));
-    thread::spawn(|| -> ServerResult<()> { WebuiServer::run() });
-    sleep(Duration::from_millis(100));
+
+    let th_node_webui = thread::spawn(|| -> WebUiResult<()> {
+        sleep(Duration::from_millis(50));
+        WebUiServer::run()
+    });
+
+    let th_node_client = thread::spawn(|| -> ClientResult<()> {
+        sleep(Duration::from_millis(2000));
+        NodeClient::run()
+    });
+
     NodeServer::run()?;
+
     Ok(())
 }

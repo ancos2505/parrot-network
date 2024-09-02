@@ -4,12 +4,12 @@ use h10::http::{
     status_code::StatusCode,
 };
 
-use super::WebuiResponse;
+use super::WebUiResponse;
 
-pub(crate) fn styles_css() -> H10LibResult<WebuiResponse> {
+pub(crate) fn styles_css() -> H10LibResult<WebUiResponse> {
     let css = include_str!("../../../../assets/styles.css");
 
-    Ok(WebuiResponse::new(StatusCode::OK)
+    Ok(WebUiResponse::new(StatusCode::OK)
         .add_header(ContentType::css())
         .add_header(Date::now()?)
         .add_header(Server::default())

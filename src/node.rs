@@ -1,10 +1,3 @@
-use std::{fmt::Display, fs::File};
-
-use serde::Deserialize;
-use server::result::{ServerError, ServerResult};
-
-use self::cli::Cli;
-
 pub(crate) mod attic;
 pub(crate) mod cli;
 pub(crate) mod client;
@@ -15,6 +8,15 @@ pub(crate) mod server;
 pub(crate) mod traits;
 pub(crate) mod webui;
 
+use std::{fmt::Display, fs::File, net::IpAddr, str::FromStr};
+
+use client::result::ClientError;
+use serde::{Deserialize, Deserializer};
+
+use self::server::result::{ServerError, ServerResult};
+
+use self::cli::Cli;
+
 pub(crate) struct NodeConfig {
     cli: Cli,
     toml: ConfigFromToml,
@@ -22,8 +24,6 @@ pub(crate) struct NodeConfig {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ConfigFromToml {
-    // global_string: Option<String>,
-    // global_integer: Option<u64>,
     server: ServerConfig,
     peers: Vec<PeerConfig>,
 }
@@ -73,7 +73,7 @@ impl NodeConfig {
 
 #[derive(Debug, Deserialize)]
 struct ServerConfig {
-    ip: String,
+    ip: IpAddr,
     port: u16,
 }
 
@@ -85,12 +85,41 @@ impl Display for ServerConfig {
 
 #[derive(Debug, Deserialize)]
 struct PeerConfig {
-    ip: String,
+    #[serde(deserialize_with = "deserialize_ascii_hostname")]
+    host: AsciiHostname,
     port: u16,
 }
 
 impl Display for PeerConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.ip, self.port)
+        write!(f, "{}:{}", self.host.0, self.port)
     }
+}
+
+#[derive(Debug, Deserialize)]
+struct AsciiHostname(String);
+
+// TODO: Implement more sophisticated validations rather for IP or Hostname
+impl FromStr for AsciiHostname {
+    type Err = ClientError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        for c in s.chars() {
+            if !(c.is_ascii_alphanumeric() || c == '-' || c == '.') {
+                return Err(ClientError::ParseAsciiHostname(
+                    "Not a valid ASCII payload for AsciiHostname".into(),
+                ));
+            }
+        }
+        Ok(Self(s.to_owned()))
+    }
+}
+
+fn deserialize_ascii_hostname<'de, D>(deserializer: D) -> Result<AsciiHostname, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+
+    AsciiHostname::from_str(&buf).map_err(serde::de::Error::custom)
 }

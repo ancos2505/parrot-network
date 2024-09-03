@@ -8,7 +8,7 @@ pub(crate) mod server;
 pub(crate) mod traits;
 pub(crate) mod webui;
 
-use std::{fmt::Display, fs::File, net::IpAddr, str::FromStr};
+use std::{fmt::Display, fs::File, str::FromStr};
 
 use client::result::ClientError;
 use ed25519_dalek::SecretKey;
@@ -26,14 +26,14 @@ pub(crate) struct NodeConfig {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ConfigFromToml {
-    server: ServerConfig,
+    // server: ServerConfig,
     peers: Vec<PeerConfig>,
 }
 
 impl ConfigFromToml {
-    pub(crate) fn server(&self) -> &ServerConfig {
-        &self.server
-    }
+    // pub(crate) fn server(&self) -> &ServerConfig {
+    //     &self.server
+    // }
 
     pub(crate) fn peers(&self) -> &[PeerConfig] {
         &self.peers
@@ -83,32 +83,27 @@ impl NodeConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub(crate) struct ServerConfig {
-    secret_key_file: Option<String>,
-    ip: IpAddr,
-    port: u16,
-}
+// #[derive(Debug, Deserialize)]
+// pub(crate) struct ServerConfig {
+//     ip: IpAddr,
+//     port: u16,
+// }
 
-impl ServerConfig {
-    pub(crate) fn secret_key_file(&self) -> Option<&String> {
-        self.secret_key_file.as_ref()
-    }
+// impl ServerConfig {
+//     pub(crate) fn ip(&self) -> IpAddr {
+//         self.ip
+//     }
 
-    pub(crate) fn ip(&self) -> IpAddr {
-        self.ip
-    }
+//     pub(crate) fn port(&self) -> u16 {
+//         self.port
+//     }
+// }
 
-    pub(crate) fn port(&self) -> u16 {
-        self.port
-    }
-}
-
-impl Display for ServerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}", self.ip, self.port)
-    }
-}
+// impl Display for ServerConfig {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(f, "{}:{}", self.ip, self.port)
+//     }
+// }
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct PeerConfig {

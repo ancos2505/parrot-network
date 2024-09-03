@@ -24,7 +24,7 @@ pub(crate) enum ServerError {
     AddrParseError(AddrParseError),
     TomlFileError(toml::de::Error),
     PoisonErrorRwLockReadGuard,
-    PortParseError,
+    // PortParseError,
     InvalidLogLevel,
     DbTransactionError(TransactionError),
     DbTableError(TableError),
@@ -37,6 +37,7 @@ pub(crate) enum ServerError {
     // TryFromSliceError(TryFromSliceError),
     BlockchainProtoError(BlockchainProtoError),
     Ed25519Error(Ed25519Error),
+    NodeSigningKey(String),
     Custom(String),
 }
 
@@ -144,7 +145,7 @@ impl Display for ServerError {
             Self::AddrParseError(err) => output.push_str(format!("{err}").as_str()),
             Self::TomlFileError(err) => output.push_str(format!("{err}").as_str()),
             Self::PoisonErrorRwLockReadGuard => output.push_str("PoisonErrorRwLockReadGuard"),
-            Self::PortParseError => output.push_str("PortParseError"),
+            // Self::PortParseError => output.push_str("PortParseError"),
             Self::InvalidLogLevel => output.push_str("Invalid LogLevel"),
             Self::DbTransactionError(err) => output.push_str(format!("{err}").as_str()),
             Self::DbTableError(err) => output.push_str(format!("{err}").as_str()),
@@ -157,6 +158,7 @@ impl Display for ServerError {
             // Self::TryFromSliceError(err) => output.push_str(format!("{err}").as_str()),
             Self::Ed25519Error(err) => output.push_str(format!("{err}").as_str()),
             Self::BlockchainProtoError(err) => output.push_str(format!("{err}").as_str()),
+            Self::NodeSigningKey(err) => output.push_str(format!("{err}").as_str()),
             Self::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)

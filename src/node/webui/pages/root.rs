@@ -72,6 +72,12 @@ pub(crate) fn root(request: Request) -> H10LibResult<WebUiResponse> {
         )
         .head_item(
             Link::builder()
+                .attr("href", "/assets/pico.min.css")
+                .attr("rel", "stylesheet")
+                .attr("type", "text/css"),
+        )
+        .head_item(
+            Link::builder()
                 .attr("href", "/assets/styles.css")
                 .attr("rel", "stylesheet")
                 .attr("type", "text/css"),
@@ -92,5 +98,5 @@ pub(crate) fn root(request: Request) -> H10LibResult<WebUiResponse> {
         .add_header(Date::now()?)
         .add_header(Server::default())
         .add_header(Pragma::default())
-        .body(html.to_string()))
+        .set_body(html.to_string()))
 }

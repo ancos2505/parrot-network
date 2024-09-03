@@ -35,5 +35,5 @@ pub(crate) fn error_404() -> H10LibResult<WebUiResponse> {
         .add_header(ContentType::html())
         .add_header(Server::default())
         .add_header(Pragma::default())
-        .body(html.to_string()))
+        .set_body(html.to_string()))
 }

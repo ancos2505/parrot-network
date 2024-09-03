@@ -1,4 +1,5 @@
 mod error_404;
+mod pico_min_css;
 mod root;
 mod styles_css;
 
@@ -6,6 +7,7 @@ use h10::http::request::Request;
 
 use crate::NODE_CONFIG;
 
+use self::pico_min_css::pico_min_css;
 use self::styles_css::styles_css;
 
 use super::WebUiResponse;
@@ -31,6 +33,7 @@ impl Endpoint {
         let res = match &**request.path() {
             "/" => root(request),
             "/assets/styles.css" => styles_css(),
+            "/assets/pico.min.css" => pico_min_css(),
             _ => error_404(),
         };
 

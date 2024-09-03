@@ -1,23 +1,19 @@
+mod http_client;
 pub(crate) mod result;
 
 use std::{thread, time::Duration};
 
 use ed25519_dalek::SigningKey;
-use h10::{
-    client::HttpClient,
-    http::{
-        headers::{From, IntoHeader},
-        request::Request,
-        response::parser::ResponseParser,
-        url_path::UrlPath,
-    },
+use h10::http::{
+    headers::{From, UserAgent},
+    request::Request,
+    response::parser::ResponseParser,
+    url_path::UrlPath,
 };
+use http_client::ParrotHttpClient;
 use result::ClientError;
 
-use crate::{
-    proto::helpers::hex_to_string::{hex_array_32, hex_pubkey},
-    NODE_CONFIG,
-};
+use crate::{proto::helpers::hex_to_string::hex_array_32, NODE_CONFIG};
 
 use self::result::ClientResult;
 
@@ -60,7 +56,9 @@ impl NodeClient {
                     .secret_key()
                     .map(|secret| SigningKey::from_bytes(&secret))
             })
-            .ok_or(ClientError::NodeSigningKey("".into()))?;
+            .ok_or(ClientError::NodeSigningKey(
+                "Error on getting signingkey".into(),
+            ))?;
 
         let pubkey = signing_key.verifying_key();
 
@@ -68,15 +66,28 @@ impl NodeClient {
 
         let header_from = From::new(&pubkey_str)?;
 
+        let user_agent = UserAgent::custom(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))?;
+
         let request = Request::get()
-            .path(UrlPath::root())
+            .path(UrlPath::new_unchecked("/api/client/new"))
+            .add_header(user_agent)
             .add_header(header_from)
             .finish();
 
+        println!("NodeServer: Send request to {}", peer);
+
         println!("NodeClient: Sending Request:\n{request}");
+
         let timeout = Duration::from_secs(5);
 
-        let response_str = HttpClient::launch(request, peer.to_string(), timeout)?;
+        let response_str = match ParrotHttpClient::launch(request, peer.to_string(), timeout) {
+            Ok(res) => res,
+            Err(err) => {
+                // TODO Blocklist peer;
+                // dbg!(&err);
+                return Err(err.into());
+            }
+        };
 
         let response = ResponseParser::parse(response_str.as_bytes())?;
 

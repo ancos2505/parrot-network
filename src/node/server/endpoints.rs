@@ -2,7 +2,7 @@ use h10::http::{request::Request, status_code::StatusCode};
 
 use crate::NODE_CONFIG;
 
-use super::{ServerResponse, ServerResult};
+use super::{api::Api, health_check::HealthCheck, ServerResponse, ServerResult};
 
 pub(crate) struct Endpoint;
 
@@ -20,12 +20,15 @@ impl Endpoint {
             }
         };
 
-        let res: ServerResult<ServerResponse> = match &**request.path() {
-            "/" => Ok(ServerResponse::new(StatusCode::NotImplemented)),
-            "/api/" => Ok(ServerResponse::new(StatusCode::NotImplemented)),
-            _ => Ok(ServerResponse::new(StatusCode::NotFound)),
-        };
+        let path_str = &**request.path();
 
+        let res: ServerResult<ServerResponse> = if path_str == "/health" {
+            HealthCheck::handler(&request)
+        } else if path_str.starts_with("/api/") {
+            Api::handler(&request)
+        } else {
+            Ok(ServerResponse::new(StatusCode::NotFound))
+        };
         match res {
             Ok(response) => return response,
             Err(err) => ServerResponse::new(err.into()),

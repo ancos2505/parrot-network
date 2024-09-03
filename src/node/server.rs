@@ -1,15 +1,16 @@
 mod api;
 mod endpoints;
+mod health_check;
 pub mod result;
 
 use std::{
     io::{Read, Write},
-    net::{TcpListener, TcpStream},
+    net::{SocketAddr, TcpListener, TcpStream},
     time::Instant,
 };
 
 use h10::http::{
-    headers::{Connection, IntoHeader},
+    headers::IntoHeader,
     response::Response,
     result::{H10LibError, H10LibResult},
     status_code::StatusCode,
@@ -17,27 +18,21 @@ use h10::http::{
 
 use crate::node::log::LogLevel;
 
-use crate::{HTTP10_STRICT_MODE, NODE_CONFIG};
+use crate::{node::traits::IntoResponse, NODE_CONFIG};
 
 use super::{constants::MAX_HTTP_MESSAGE_LENGTH, NodeConfig};
 
 use self::{endpoints::Endpoint, result::ServerResult};
 
-use crate::node::traits::IntoResponse;
-
 pub(crate) struct ServerResponse(Response);
 impl ServerResponse {
     pub(crate) fn new(status: StatusCode) -> Self {
-        if HTTP10_STRICT_MODE.get().is_some() {
-            Self(Response::new(status))
-        } else {
-            Self(Response::new(status).add_header(Connection::default()))
-        }
+        Self(Response::new(status))
     }
     pub(crate) fn add_header<H: IntoHeader>(self, header: H) -> Self {
         Self(self.0.add_header(header))
     }
-    pub(crate) fn body<B: AsRef<str>>(self, body: B) -> Self {
+    pub(crate) fn set_body<B: AsRef<str>>(self, body: B) -> Self {
         Self(self.0.set_body(body))
     }
 }
@@ -58,15 +53,18 @@ pub(crate) struct NodeServer;
 impl NodeServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
-    fn listener(server_config: &NodeConfig) -> String {
-        format!("{}", server_config.toml().server())
+    fn build_listener(node_config: &NodeConfig) -> SocketAddr {
+        let ip = node_config.cli().server_ip();
+        let port = node_config.cli().server_port();
+        SocketAddr::from((ip, port))
     }
+
     pub(crate) fn run() -> ServerResult<()> {
         if let Some(node_config) = NODE_CONFIG.get() {
-            let list_str = Self::listener(node_config);
-            let listener = TcpListener::bind(&list_str)?;
+            let socket_addr = Self::build_listener(node_config);
+            let listener = TcpListener::bind(&socket_addr)?;
 
-            println!("NodeServer: Listening for connections on {}", list_str);
+            println!("NodeServer: Listening for connections on {}", socket_addr);
 
             for stream in listener.incoming() {
                 match stream {
@@ -83,29 +81,39 @@ impl NodeServer {
 
         Ok(())
     }
-    fn handle_client(stream: TcpStream) -> ClientHandlingOutcome {
+    fn handle_client(stream: TcpStream) -> ServerResult<ClientHandlingOutcome> {
         let now = Instant::now();
 
         let resonse_to_send = match Self::handle_read(&stream) {
             Ok(res) => res,
-            Err(error) => {
-                dbg!(&error);
+            Err(err) => {
+                println!(
+                    "NodeServer: Internal Error(Possible Service Unavailable?). Reason: {err}."
+                );
                 ServerResponse::new(StatusCode::ServiceUnavailable)
             }
         };
 
-        if let Err(error) = Self::handle_write(stream, resonse_to_send) {
-            dbg!(&error);
-            ClientHandlingOutcome::Failure(error.to_string())
+        if let Err(err) = Self::handle_write(stream, resonse_to_send) {
+            println!(
+                "NodeServer: Internal Error(Unable to confirm if Response sent). Reason: {err}."
+            );
+
+            Ok(ClientHandlingOutcome::Failure(err.to_string()))
         } else {
             let elapsed = now.elapsed().as_secs_f64();
             let msg = format!("Response sent after {elapsed} secs.");
             println!("NodeServer: {msg}");
-            ClientHandlingOutcome::Success(msg)
+            Ok(ClientHandlingOutcome::Success(msg))
         }
     }
     fn handle_read(mut stream: &TcpStream) -> H10LibResult<ServerResponse> {
-        // TODO
+        println!(
+            "NodeServer: Received connection to socket {} from {}",
+            stream.local_addr()?,
+            stream.peer_addr()?
+        );
+
         let mut buf = [0u8; Self::CHUNK_SIZE];
         match stream.read(&mut buf) {
             Ok(bytes) => {
@@ -115,6 +123,7 @@ impl NodeServer {
                         println!("NodeServer: Request received: {bytes} Bytes.");
                     }
                 }
+                // TODO Blocklist peer_addr();
                 Ok(Endpoint::dispatcher(&buf))
             }
             Err(err) => {

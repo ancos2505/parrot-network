@@ -6,8 +6,8 @@ use h10::http::{
 
 use super::WebUiResponse;
 
-pub(crate) fn styles_css() -> H10LibResult<WebUiResponse> {
-    let css = include_str!("../../../../assets/styles.css");
+pub(crate) fn pico_min_css() -> H10LibResult<WebUiResponse> {
+    let css = include_str!("../../../../assets/pico.min.css");
 
     Ok(WebUiResponse::new(StatusCode::OK)
         .add_header(ContentType::css())

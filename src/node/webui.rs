@@ -3,7 +3,7 @@ pub(crate) mod result;
 
 use std::{
     io::{Read, Write},
-    net::{TcpListener, TcpStream},
+    net::{SocketAddr, TcpListener, TcpStream},
     time::Instant,
 };
 
@@ -43,7 +43,7 @@ impl WebUiResponse {
     pub(crate) fn add_header<H: IntoHeader>(self, header: H) -> Self {
         Self(self.0.add_header(header))
     }
-    pub(crate) fn body<B: AsRef<str>>(self, body: B) -> Self {
+    pub(crate) fn set_body<B: AsRef<str>>(self, body: B) -> Self {
         Self(self.0.set_body(body))
     }
 }
@@ -58,13 +58,14 @@ pub(crate) struct WebUiServer;
 impl WebUiServer {
     const CHUNK_SIZE: usize = MAX_HTTP_MESSAGE_LENGTH;
 
-    fn listener(node_config: &NodeConfig) -> String {
-        let cli = node_config.cli();
-        format!("{}:{}", cli.webui_ip(), cli.webui_port())
+    fn build_listener(node_config: &NodeConfig) -> SocketAddr {
+        let ip = node_config.cli().webui_ip();
+        let port = node_config.cli().webui_port();
+        SocketAddr::from((ip, port))
     }
     pub(crate) fn run() -> WebUiResult<()> {
         if let Some(node_config) = NODE_CONFIG.get() {
-            let list_str = Self::listener(node_config);
+            let list_str = Self::build_listener(node_config);
             let listener = TcpListener::bind(&list_str)?;
 
             println!("WebuiServer: Listening for connections on {}", list_str);

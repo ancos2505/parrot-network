@@ -1,7 +1,7 @@
 use super::result::{BlockchainProtoError, BlockchainProtoResult};
 
 /// # Parrot token
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Parrots {
     wings: Wings,
 }
@@ -19,7 +19,8 @@ impl Parrots {
 /// ## Wings
 ///
 /// 1_000_000 **Wings** => 1 **Parrot**
-#[derive(Debug, Clone, PartialEq, Eq)]
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Wings(u64);
 
 impl Wings {

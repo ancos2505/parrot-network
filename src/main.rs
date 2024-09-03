@@ -8,19 +8,21 @@ use std::{
     time::Duration,
 };
 
-use crate::node::{
-    client::{result::ClientResult, NodeClient},
-    db::ParrotDb,
-    server::result::ServerResult,
-    server::NodeServer,
-    webui::Cli,
-    webui::{result::WebUiResult, WebUiServer},
-    NodeConfig,
-};
-
 use clap::Parser;
-use ed25519_dalek::{SecretKey, SECRET_KEY_LENGTH};
-use proto::blockchain::block::Block;
+use proto::blockchain::wallet::SecretKey;
+
+use crate::{
+    node::{
+        client::{result::ClientResult, NodeClient},
+        db::ParrotDb,
+        server::result::ServerResult,
+        server::NodeServer,
+        webui::Cli,
+        webui::{result::WebUiResult, WebUiServer},
+        NodeConfig,
+    },
+    proto::blockchain::block::Block,
+};
 
 // Unsafe
 static ROOT_PAGER_COUNTER: AtomicUsize = AtomicUsize::new(0);
@@ -47,40 +49,29 @@ fn smain() -> ServerResult<()> {
     let mut node_config = NodeConfig::load(cli)?;
 
     // TODO
-    {
-        // if let Some(secret_key_file) = node_config.toml().server().secret_key_file() {}
 
-        let secret_key: SecretKey = {
-            use rand::{rngs::OsRng, RngCore};
-            let mut inner_buf = [0u8; SECRET_KEY_LENGTH];
-            OsRng.fill_bytes(&mut inner_buf);
-            inner_buf
-        }
-        .into();
-
-        node_config.set_secret_key(secret_key);
-    }
+    node_config.set_secret_key(SecretKey::random());
 
     NODE_CONFIG.get_or_init(|| node_config);
 
     let th_genesis_block = thread::spawn(|| -> ServerResult<()> {
         // TODO: WIP.
         // TODO: In the future must be pre-generated.
-        let mut genesis_block = Block::genesis_block()?;
-        println!("Db: Genesis Block to before mining: {:?}", &genesis_block);
-        println!("\n\n\n\n");
-        genesis_block.mine()?;
+        // let mut genesis_block = Block::genesis_block()?;
+        // println!("Db: Genesis Block to before mining: {:?}", &genesis_block);
+        // println!("\n\n\n\n");
+        // genesis_block.mine()?;
 
-        genesis_block.verify()?;
+        // genesis_block.verify()?;
 
-        let mut db = ParrotDb::open()?;
-        println!("Db: Genesis Block mined to be saved: {:?}", &genesis_block);
-        let id = db.save_block(&genesis_block)?;
+        // let mut db = ParrotDb::open()?;
+        // println!("Db: Genesis Block mined to be saved: {:?}", &genesis_block);
+        // let id = db.save_block(&genesis_block)?;
 
-        let retrieved_block = db.get_block(id)?;
-        println!("Db: Genesis Block retrieved.: {:?}", &retrieved_block);
+        // let retrieved_block = db.get_block(id)?;
+        // println!("Db: Genesis Block retrieved.: {:?}", &retrieved_block);
 
-        assert_eq!(&genesis_block, &retrieved_block);
+        // assert_eq!(&genesis_block, &retrieved_block);
         Ok(())
     });
 
@@ -90,7 +81,7 @@ fn smain() -> ServerResult<()> {
     });
 
     let th_node_client = thread::spawn(|| -> ClientResult<()> {
-        sleep(Duration::from_millis(2000));
+        sleep(Duration::from_millis(5_000));
         NodeClient::run()
     });
 

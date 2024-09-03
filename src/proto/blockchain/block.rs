@@ -16,7 +16,7 @@ pub(crate) use self::{
 
 use super::result::BlockchainProtoResult;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub(crate) struct Block {
     pub status: BlockStatus,
     pub previous: BlockHash,
@@ -43,205 +43,205 @@ impl Block {
         + BlockTimestamp::PAYLOAD_LEN
         + BlockNonce::PAYLOAD_LEN;
 
-    pub(crate) fn genesis_block() -> BlockchainProtoResult<Self> {
-        let transactions = BlockTransactions::genesis_transactions()?;
-        let previous = const { BlockHash::zero() };
-        let timestamp = const { BlockTimestamp::genesis() };
-        let index = const { BlockIndex::zero() };
-        let nonce = const { BlockNonce::zero() };
-        let current = const { BlockHash::zero() };
+    // pub(crate) fn genesis_block() -> BlockchainProtoResult<Self> {
+    //     let transactions = BlockTransactions::genesis_transactions()?;
+    //     let previous = const { BlockHash::zero() };
+    //     let timestamp = const { BlockTimestamp::genesis() };
+    //     let index = const { BlockIndex::zero() };
+    //     let nonce = const { BlockNonce::zero() };
+    //     let current = const { BlockHash::zero() };
 
-        Ok(Self {
-            status: BlockStatus::NotMined,
-            previous,
-            index,
-            transactions,
-            timestamp,
-            nonce,
-            current,
-        })
-    }
+    //     Ok(Self {
+    //         status: BlockStatus::NotMined,
+    //         previous,
+    //         index,
+    //         transactions,
+    //         timestamp,
+    //         nonce,
+    //         current,
+    //     })
+    // }
 
-    pub(crate) fn as_bytes_to_mine(
-        &self,
-    ) -> BlockchainProtoResult<Box<[u8; Self::PAYLOAD_TO_MINING_LEN]>> {
-        let mut buf = Box::new([0u8; Self::PAYLOAD_TO_MINING_LEN]);
+    // pub(crate) fn as_bytes_to_mine(
+    //     &self,
+    // ) -> BlockchainProtoResult<Box<[u8; Self::PAYLOAD_TO_MINING_LEN]>> {
+    //     let mut buf = Box::new([0u8; Self::PAYLOAD_TO_MINING_LEN]);
 
-        const PREVIOUS_END: usize = size_of::<BlockHash>();
+    //     const PREVIOUS_END: usize = size_of::<BlockHash>();
 
-        buf[0..PREVIOUS_END].copy_from_slice(&*self.previous);
+    //     buf[0..PREVIOUS_END].copy_from_slice(&*self.previous);
 
-        const INDEX_END: usize = PREVIOUS_END + size_of::<BlockIndex>();
+    //     const INDEX_END: usize = PREVIOUS_END + size_of::<BlockIndex>();
 
-        buf[PREVIOUS_END..INDEX_END].copy_from_slice(&(*self.index).to_be_bytes());
+    //     buf[PREVIOUS_END..INDEX_END].copy_from_slice(&(*self.index).to_be_bytes());
 
-        const TRANSACTIONS_END: usize = INDEX_END + BlockTransactions::PAYLOAD_LEN;
+    //     const TRANSACTIONS_END: usize = INDEX_END + BlockTransactions::PAYLOAD_LEN;
 
-        buf[INDEX_END..TRANSACTIONS_END].copy_from_slice(&self.transactions.serialize_to_bytes()?);
+    //     buf[INDEX_END..TRANSACTIONS_END].copy_from_slice(&self.transactions.serialize_to_bytes()?);
 
-        const TIMESTAMP_END: usize = TRANSACTIONS_END + size_of::<BlockTimestamp>();
-        buf[TRANSACTIONS_END..TIMESTAMP_END].copy_from_slice(&(*self.timestamp).to_be_bytes());
-        const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
-        buf[TIMESTAMP_END..NONCE_END].copy_from_slice(&(*self.nonce).to_be_bytes());
+    //     const TIMESTAMP_END: usize = TRANSACTIONS_END + size_of::<BlockTimestamp>();
+    //     buf[TRANSACTIONS_END..TIMESTAMP_END].copy_from_slice(&(*self.timestamp).to_be_bytes());
+    //     const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
+    //     buf[TIMESTAMP_END..NONCE_END].copy_from_slice(&(*self.nonce).to_be_bytes());
 
-        Ok(buf)
-    }
+    //     Ok(buf)
+    // }
 
-    pub(crate) fn mine(&mut self) -> BlockchainProtoResult<()> {
-        use sha2::{Digest, Sha256};
-        use std::time::Instant;
+    // pub(crate) fn mine(&mut self) -> BlockchainProtoResult<()> {
+    //     use sha2::{Digest, Sha256};
+    //     use std::time::Instant;
 
-        println!("Mining {} Bytes ...", self.as_bytes_to_mine()?.len());
+    //     println!("Mining {} Bytes ...", self.as_bytes_to_mine()?.len());
 
-        let now = Instant::now();
+    //     let now = Instant::now();
 
-        for nonce_attempt in 0..u64::MAX {
-            self.nonce = BlockNonce::new(nonce_attempt);
+    //     for nonce_attempt in 0..u64::MAX {
+    //         self.nonce = BlockNonce::new(nonce_attempt);
 
-            let mut hasher = Sha256::new();
+    //         let mut hasher = Sha256::new();
 
-            let bytes = self.as_bytes_to_mine()?;
+    //         let bytes = self.as_bytes_to_mine()?;
 
-            hasher.update(&*bytes);
+    //         hasher.update(&*bytes);
 
-            let hash: [u8; 32] = hasher.finalize().into();
+    //         let hash: [u8; 32] = hasher.finalize().into();
 
-            let block_hash = BlockHash::new(hash);
+    //         let block_hash = BlockHash::new(hash);
 
-            if is_nonce_found(&block_hash) {
-                self.current = block_hash;
-                self.status = BlockStatus::Mined;
-                println!("Mined in {} secs", now.elapsed().as_secs_f32());
-                return Ok(());
-            } else {
-                continue;
-            }
-        }
-        Err(BlockchainProtoError::custom(
-            "Impossible state on mining new block",
-        ))
-    }
+    //         if is_nonce_found(&block_hash) {
+    //             self.current = block_hash;
+    //             self.status = BlockStatus::Mined;
+    //             println!("Mined in {} secs", now.elapsed().as_secs_f32());
+    //             return Ok(());
+    //         } else {
+    //             continue;
+    //         }
+    //     }
+    //     Err(BlockchainProtoError::custom(
+    //         "Impossible state on mining new block",
+    //     ))
+    // }
 
-    pub(crate) fn verify(&self) -> BlockchainProtoResult<()> {
-        use sha2::{Digest, Sha256};
+    // pub(crate) fn verify(&self) -> BlockchainProtoResult<()> {
+    //     use sha2::{Digest, Sha256};
 
-        let mut hasher = Sha256::new();
+    //     let mut hasher = Sha256::new();
 
-        let bytes = self.as_bytes_to_mine()?;
+    //     let bytes = self.as_bytes_to_mine()?;
 
-        hasher.update(&*bytes);
+    //     hasher.update(&*bytes);
 
-        let hash: [u8; 32] = hasher.finalize().into();
+    //     let hash: [u8; 32] = hasher.finalize().into();
 
-        let block_hash = BlockHash::new(hash);
+    //     let block_hash = BlockHash::new(hash);
 
-        // dbg!(hex_array_32(&self.current), hex_array_32(&block_hash));
+    //     // dbg!(hex_array_32(&self.current), hex_array_32(&block_hash));
 
-        if self.current == block_hash {
-            Ok(())
-        } else {
-            Err(BlockchainProtoError::custom(
-                "Impossible state on mining new block",
-            ))
-        }
-    }
+    //     if self.current == block_hash {
+    //         Ok(())
+    //     } else {
+    //         Err(BlockchainProtoError::custom(
+    //             "Impossible state on mining new block",
+    //         ))
+    //     }
+    // }
 }
 
-impl Serializable for Block {
-    type Bytes = [u8; Self::PAYLOAD_LEN];
-    fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
-        let Self {
-            status,
-            previous,
-            index,
-            transactions,
-            timestamp,
-            nonce,
-            current,
-        } = self;
+// impl Serializable for Block {
+//     type Bytes = [u8; Self::PAYLOAD_LEN];
+//     fn serialize_to_bytes(&self) -> BlockchainProtoResult<Self::Bytes> {
+//         let Self {
+//             status,
+//             previous,
+//             index,
+//             transactions,
+//             timestamp,
+//             nonce,
+//             current,
+//         } = self;
 
-        let mut buf = [0u8; Self::PAYLOAD_LEN];
+//         let mut buf = [0u8; Self::PAYLOAD_LEN];
 
-        const STATUS_END: usize = size_of::<BlockStatus>();
+//         const STATUS_END: usize = size_of::<BlockStatus>();
 
-        buf[0..STATUS_END].copy_from_slice(&status.serialize_to_bytes()?);
+//         buf[0..STATUS_END].copy_from_slice(&status.serialize_to_bytes()?);
 
-        const PREVIOUS_END: usize = STATUS_END + size_of::<BlockHash>();
+//         const PREVIOUS_END: usize = STATUS_END + size_of::<BlockHash>();
 
-        buf[STATUS_END..PREVIOUS_END].copy_from_slice(&previous.serialize_to_bytes()?);
+//         buf[STATUS_END..PREVIOUS_END].copy_from_slice(&previous.serialize_to_bytes()?);
 
-        const INDEX_END: usize = PREVIOUS_END + size_of::<BlockIndex>();
+//         const INDEX_END: usize = PREVIOUS_END + size_of::<BlockIndex>();
 
-        buf[PREVIOUS_END..INDEX_END].copy_from_slice(&index.to_be_bytes());
+//         buf[PREVIOUS_END..INDEX_END].copy_from_slice(&index.to_be_bytes());
 
-        const TRANSACTIONS_END: usize = INDEX_END + BlockTransactions::PAYLOAD_LEN;
+//         const TRANSACTIONS_END: usize = INDEX_END + BlockTransactions::PAYLOAD_LEN;
 
-        buf[INDEX_END..TRANSACTIONS_END].copy_from_slice(&transactions.serialize_to_bytes()?);
+//         buf[INDEX_END..TRANSACTIONS_END].copy_from_slice(&transactions.serialize_to_bytes()?);
 
-        const TIMESTAMP_END: usize = TRANSACTIONS_END + size_of::<BlockTimestamp>();
+//         const TIMESTAMP_END: usize = TRANSACTIONS_END + size_of::<BlockTimestamp>();
 
-        buf[TRANSACTIONS_END..TIMESTAMP_END].copy_from_slice(&(*timestamp).to_be_bytes());
+//         buf[TRANSACTIONS_END..TIMESTAMP_END].copy_from_slice(&(*timestamp).to_be_bytes());
 
-        const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
+//         const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
 
-        buf[TIMESTAMP_END..NONCE_END].copy_from_slice(&(*nonce).to_be_bytes());
+//         buf[TIMESTAMP_END..NONCE_END].copy_from_slice(&(*nonce).to_be_bytes());
 
-        const CURRENT_END: usize = NONCE_END + size_of::<BlockHash>();
+//         const CURRENT_END: usize = NONCE_END + size_of::<BlockHash>();
 
-        buf[NONCE_END..CURRENT_END].copy_from_slice(&current.serialize_to_bytes()?);
+//         buf[NONCE_END..CURRENT_END].copy_from_slice(&current.serialize_to_bytes()?);
 
-        // TODO
-        assert_eq!(CURRENT_END, Self::PAYLOAD_LEN);
+//         // TODO
+//         assert_eq!(CURRENT_END, Self::PAYLOAD_LEN);
 
-        Ok(buf)
-    }
+//         Ok(buf)
+//     }
 
-    fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
-        const STATUS_END: usize = size_of::<BlockStatus>();
+//     fn deserialize_from_bytes(bytes: Self::Bytes) -> BlockchainProtoResult<Self> {
+//         const STATUS_END: usize = size_of::<BlockStatus>();
 
-        let status = BlockStatus::deserialize_from_bytes([bytes[0]])?;
+//         let status = BlockStatus::deserialize_from_bytes([bytes[0]])?;
 
-        const PREVIOUS_END: usize = STATUS_END + size_of::<BlockHash>();
+//         const PREVIOUS_END: usize = STATUS_END + size_of::<BlockHash>();
 
-        let previous =
-            BlockHash::deserialize_from_bytes(bytes[STATUS_END..PREVIOUS_END].try_into()?)?;
+//         let previous =
+//             BlockHash::deserialize_from_bytes(bytes[STATUS_END..PREVIOUS_END].try_into()?)?;
 
-        const INDEX_END: usize = PREVIOUS_END + size_of::<BlockIndex>();
+//         const INDEX_END: usize = PREVIOUS_END + size_of::<BlockIndex>();
 
-        let index = BlockIndex::deserialize_from_bytes(bytes[PREVIOUS_END..INDEX_END].try_into()?)?;
+//         let index = BlockIndex::deserialize_from_bytes(bytes[PREVIOUS_END..INDEX_END].try_into()?)?;
 
-        const TRANSACTIONS_END: usize = INDEX_END + BlockTransactions::PAYLOAD_LEN;
+//         const TRANSACTIONS_END: usize = INDEX_END + BlockTransactions::PAYLOAD_LEN;
 
-        let transactions = BlockTransactions::deserialize_from_bytes(
-            bytes[INDEX_END..TRANSACTIONS_END].try_into()?,
-        )?;
+//         let transactions = BlockTransactions::deserialize_from_bytes(
+//             bytes[INDEX_END..TRANSACTIONS_END].try_into()?,
+//         )?;
 
-        const TIMESTAMP_END: usize = TRANSACTIONS_END + size_of::<BlockTimestamp>();
+//         const TIMESTAMP_END: usize = TRANSACTIONS_END + size_of::<BlockTimestamp>();
 
-        let timestamp = BlockTimestamp::deserialize_from_bytes(
-            bytes[TRANSACTIONS_END..TIMESTAMP_END].try_into()?,
-        )?;
+//         let timestamp = BlockTimestamp::deserialize_from_bytes(
+//             bytes[TRANSACTIONS_END..TIMESTAMP_END].try_into()?,
+//         )?;
 
-        const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
+//         const NONCE_END: usize = TIMESTAMP_END + size_of::<BlockNonce>();
 
-        let nonce =
-            BlockNonce::deserialize_from_bytes(bytes[TIMESTAMP_END..NONCE_END].try_into()?)?;
+//         let nonce =
+//             BlockNonce::deserialize_from_bytes(bytes[TIMESTAMP_END..NONCE_END].try_into()?)?;
 
-        const CURRENT_END: usize = NONCE_END + size_of::<BlockHash>();
+//         const CURRENT_END: usize = NONCE_END + size_of::<BlockHash>();
 
-        let current = BlockHash::deserialize_from_bytes(bytes[NONCE_END..CURRENT_END].try_into()?)?;
+//         let current = BlockHash::deserialize_from_bytes(bytes[NONCE_END..CURRENT_END].try_into()?)?;
 
-        Ok(Self {
-            status,
-            previous,
-            index,
-            transactions,
-            timestamp,
-            nonce,
-            current,
-        })
-    }
-}
+//         Ok(Self {
+//             status,
+//             previous,
+//             index,
+//             transactions,
+//             timestamp,
+//             nonce,
+//             current,
+//         })
+//     }
+// }
 
 #[cfg(debug_assertions)]
 fn is_nonce_found(block_hash: &BlockHash) -> bool {
@@ -267,74 +267,74 @@ fn is_nonce_found(block_hash: &BlockHash) -> bool {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_genesis_block_creation() {
-        // Test the creation of a genesis block and validate its fields
-        let genesis_block = Block::genesis_block();
+    // #[test]
+    // fn test_genesis_block_creation() {
+    //     // Test the creation of a genesis block and validate its fields
+    //     let genesis_block = Block::genesis_block();
 
-        // Check that genesis_block returns Ok
-        assert!(genesis_block.is_ok());
+    //     // Check that genesis_block returns Ok
+    //     assert!(genesis_block.is_ok());
 
-        // Unwrap the genesis block
-        let block = genesis_block.unwrap();
+    //     // Unwrap the genesis block
+    //     let block = genesis_block.unwrap();
 
-        // Validate that the block fields are correctly initialized
-        assert_eq!(block.previous, BlockHash::zero());
-        assert_eq!(block.index, BlockIndex::zero());
-        assert_eq!(block.timestamp, BlockTimestamp::genesis());
-        assert_eq!(block.nonce, BlockNonce::zero());
-        assert_eq!(block.current, BlockHash::zero());
+    //     // Validate that the block fields are correctly initialized
+    //     assert_eq!(block.previous, BlockHash::zero());
+    //     assert_eq!(block.index, BlockIndex::zero());
+    //     assert_eq!(block.timestamp, BlockTimestamp::genesis());
+    //     assert_eq!(block.nonce, BlockNonce::zero());
+    //     assert_eq!(block.current, BlockHash::zero());
 
-        // Check that transactions are the genesis transactions
-        let expected_transactions = BlockTransactions::genesis_transactions().unwrap();
-        assert_eq!(block.transactions, expected_transactions);
+    //     // Check that transactions are the genesis transactions
+    //     let expected_transactions = BlockTransactions::genesis_transactions().unwrap();
+    //     assert_eq!(block.transactions, expected_transactions);
 
-        // Check that timestamp is correctly set (not necessarily zero)
-        assert!(*block.timestamp > 0);
-    }
+    //     // Check that timestamp is correctly set (not necessarily zero)
+    //     assert!(*block.timestamp > 0);
+    // }
 
-    #[test]
-    fn test_block_equality() {
-        // Create two identical blocks and ensure they are equal
-        let block1 = Block::genesis_block().unwrap();
-        let block2 = Block::genesis_block().unwrap();
+    // #[test]
+    // fn test_block_equality() {
+    //     // Create two identical blocks and ensure they are equal
+    //     let block1 = Block::genesis_block().unwrap();
+    //     let block2 = Block::genesis_block().unwrap();
 
-        // Blocks should be equal since genesis block is deterministic
-        assert_eq!(block1, block2);
-    }
+    //     // Blocks should be equal since genesis block is deterministic
+    //     assert_eq!(block1, block2);
+    // }
 
-    #[test]
-    fn test_block_inequality() {
-        // Create two blocks with different timestamps or transactions
-        let block1 = Block::genesis_block().unwrap();
-        let mut block2 = Block::genesis_block().unwrap();
+    // #[test]
+    // fn test_block_inequality() {
+    //     // Create two blocks with different timestamps or transactions
+    //     let block1 = Block::genesis_block().unwrap();
+    //     let mut block2 = Block::genesis_block().unwrap();
 
-        // Modify block2's nonce
-        block2.nonce = BlockNonce::new(1);
+    //     // Modify block2's nonce
+    //     block2.nonce = BlockNonce::new(1);
 
-        // Blocks should not be equal due to different nonces
-        assert_ne!(block1, block2);
-    }
+    //     // Blocks should not be equal due to different nonces
+    //     assert_ne!(block1, block2);
+    // }
 
-    #[test]
-    fn test_edge_case_large_block_index() {
-        // Test block creation with a very large block index (near max value of BlockIndex)
-        let mut block = Block::genesis_block().unwrap();
-        block.index = BlockIndex::new(u64::MAX);
-        assert_eq!(*block.index, u64::MAX);
-    }
-    #[test]
-    fn test_serializable_trait_impl() {
-        let mut genesis_block = Block::genesis_block().unwrap();
+    // #[test]
+    // fn test_edge_case_large_block_index() {
+    //     // Test block creation with a very large block index (near max value of BlockIndex)
+    //     let mut block = Block::genesis_block().unwrap();
+    //     block.index = BlockIndex::new(u64::MAX);
+    //     assert_eq!(*block.index, u64::MAX);
+    // }
+    // #[test]
+    // fn test_serializable_trait_impl() {
+    //     let mut genesis_block = Block::genesis_block().unwrap();
 
-        genesis_block.mine().unwrap();
+    //     genesis_block.mine().unwrap();
 
-        genesis_block.verify().unwrap();
+    //     genesis_block.verify().unwrap();
 
-        let bytes = genesis_block.serialize_to_bytes().unwrap();
+    //     let bytes = genesis_block.serialize_to_bytes().unwrap();
 
-        let deserialized_block = Block::deserialize_from_bytes(bytes).unwrap();
+    //     let deserialized_block = Block::deserialize_from_bytes(bytes).unwrap();
 
-        assert_eq!(&genesis_block, &deserialized_block);
-    }
+    //     assert_eq!(&genesis_block, &deserialized_block);
+    // }
 }

@@ -10,13 +10,15 @@ pub(crate) mod webui;
 
 use std::{fmt::Display, fs::File, str::FromStr};
 
-use client::result::ClientError;
-use ed25519_dalek::SecretKey;
 use serde::{Deserialize, Deserializer};
 
-use self::server::result::{ServerError, ServerResult};
+use crate::proto::blockchain::wallet::SecretKey;
 
-use self::cli::Cli;
+use self::{
+    cli::Cli,
+    client::result::ClientError,
+    server::result::{ServerError, ServerResult},
+};
 
 pub(crate) struct NodeConfig {
     cli: Cli,
@@ -26,15 +28,10 @@ pub(crate) struct NodeConfig {
 
 #[derive(Debug, Deserialize)]
 pub(crate) struct ConfigFromToml {
-    // server: ServerConfig,
     peers: Vec<PeerConfig>,
 }
 
 impl ConfigFromToml {
-    // pub(crate) fn server(&self) -> &ServerConfig {
-    //     &self.server
-    // }
-
     pub(crate) fn peers(&self) -> &[PeerConfig] {
         &self.peers
     }
@@ -73,11 +70,11 @@ impl NodeConfig {
     pub(crate) fn toml(&self) -> &ConfigFromToml {
         &self.toml
     }
-
-    pub(crate) fn secret_key(&self) -> Option<SecretKey> {
-        self.secret_key
+    
+    pub(crate) fn secret_key(&self) -> Option<&SecretKey> {
+        self.secret_key.as_ref()
     }
-
+    
     pub(crate) fn set_secret_key(&mut self, secret_key: SecretKey) {
         self.secret_key = Some(secret_key);
     }

@@ -3,9 +3,8 @@ pub(crate) mod result;
 
 use std::{thread, time::Duration};
 
-use ed25519_dalek::SigningKey;
 use h10::http::{
-    headers::{From, UserAgent},
+    headers::{Authorization, UserAgent},
     request::Request,
     response::parser::ResponseParser,
     url_path::UrlPath,
@@ -13,7 +12,10 @@ use h10::http::{
 use http_client::ParrotHttpClient;
 use result::ClientError;
 
-use crate::{proto::helpers::hex_to_string::hex_array_32, NODE_CONFIG};
+use crate::{
+    proto::{blockchain::wallet::{PublicKey, SecretKey}, helpers::hex_to_string::hex_slice},
+    NODE_CONFIG,
+};
 
 use self::result::ClientResult;
 
@@ -49,22 +51,40 @@ impl NodeClient {
 
         let start = Instant::now();
 
-        let signing_key = NODE_CONFIG
+        let secret_key = NODE_CONFIG
             .get()
-            .and_then(|config| {
-                config
-                    .secret_key()
-                    .map(|secret| SigningKey::from_bytes(&secret))
-            })
+            .and_then(|config| config.secret_key())
             .ok_or(ClientError::NodeSigningKey(
                 "Error on getting signingkey".into(),
             ))?;
 
-        let pubkey = signing_key.verifying_key();
+        let challenge: [u8; 8] = {
+            use rand::{rngs::OsRng, RngCore};
+            let mut inner_buf = [0u8; 8];
+            OsRng.fill_bytes(&mut inner_buf);
+            inner_buf
+        };
 
-        let pubkey_str = hex_array_32(&pubkey.to_bytes());
+        let pubkey = PublicKey::from(secret_key);
 
-        let header_from = From::new(&pubkey_str)?;
+        let challenge: [u8; 8] = {
+            use rand::{rngs::OsRng, RngCore};
+            let mut inner_buf = [0u8; 8];
+            OsRng.fill_bytes(&mut inner_buf);
+            inner_buf
+        };
+
+        let signature = secret_key.sign(&challenge);
+
+        let challenge_str = hex_slice(&challenge);
+
+        let realm_str = format!("{pubkey}");
+
+        let header_value = format!(
+            r#"PKI realm="{realm_str}", challenge="{challenge_str}", signature="{signature}", public_key="{pubkey}""#,
+        );
+
+        let header_from = Authorization::new(&header_value)?;
 
         let user_agent = UserAgent::custom(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))?;
 

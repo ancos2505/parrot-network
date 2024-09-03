@@ -3,23 +3,30 @@ use std::{
     time::SystemTimeError,
 };
 
-use ed25519_dalek::SignatureError;
+use array_bytes::Error as ArrayBytesError;
 
 pub(crate) type BlockchainProtoResult<T> = Result<T, BlockchainProtoError>;
 
 #[derive(Debug)]
 pub(crate) enum BlockchainProtoError {
-    SignatureError(SignatureError),
     TryFromSliceError(TryFromSliceError),
     TryFromIntError(TryFromIntError),
     SystemTimeError(SystemTimeError),
+    ArrayBytesError(ArrayBytesError),
     TokenConversion(String),
+    FalconDeserializationError(String),
     Custom(String),
 }
 
 impl BlockchainProtoError {
     pub(crate) fn custom(s: &str) -> Self {
         Self::Custom(s.into())
+    }
+}
+
+impl From<ArrayBytesError> for BlockchainProtoError {
+    fn from(value: ArrayBytesError) -> Self {
+        Self::ArrayBytesError(value)
     }
 }
 
@@ -41,22 +48,29 @@ impl From<TryFromSliceError> for BlockchainProtoError {
     }
 }
 
-impl From<SignatureError> for BlockchainProtoError {
-    fn from(value: SignatureError) -> Self {
-        Self::SignatureError(value)
-    }
-}
-
 impl Display for BlockchainProtoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = "".to_string();
         match self {
-            Self::SignatureError(err) => output.push_str(format!("{err}").as_str()),
-            Self::TryFromSliceError(err) => output.push_str(format!("{err}").as_str()),
-            Self::TryFromIntError(err) => output.push_str(format!("{err}").as_str()),
-            Self::SystemTimeError(err) => output.push_str(format!("{err}").as_str()),
-            Self::TokenConversion(err) => output.push_str(format!("{err}").as_str()),
-            Self::Custom(err) => output.push_str(format!("{err}").as_str()),
+            BlockchainProtoError::TryFromSliceError(err) => {
+                output.push_str(format!("{err}").as_str())
+            }
+            BlockchainProtoError::TryFromIntError(err) => {
+                output.push_str(format!("{err}").as_str())
+            }
+            BlockchainProtoError::SystemTimeError(err) => {
+                output.push_str(format!("{err}").as_str())
+            }
+            BlockchainProtoError::ArrayBytesError(err) => {
+                output.push_str(format!("{err:?}").as_str())
+            }
+            BlockchainProtoError::TokenConversion(err) => {
+                output.push_str(format!("{err}").as_str())
+            }
+            BlockchainProtoError::FalconDeserializationError(err) => {
+                output.push_str(format!("{err}").as_str())
+            }
+            BlockchainProtoError::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)
     }

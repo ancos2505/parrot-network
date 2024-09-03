@@ -1,24 +1,25 @@
-use std::ops::{Deref, DerefMut};
-
-use ed25519_dalek::{
-    SecretKey, Signature, Signer, SigningKey, VerifyingKey, KEYPAIR_LENGTH, PUBLIC_KEY_LENGTH,
-    SECRET_KEY_LENGTH,
+use std::{
+    fmt::Display,
+    ops::{Deref, DerefMut},
+    str::FromStr,
 };
 
-use crate::proto::blockchain::traits::Serializable;
+use falcon_rust::falcon1024;
+
+use crate::proto::helpers::hex_to_string::{hex_pubkey, hex_signature};
 
 use super::{
     block::BlockIndex,
+    constants::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH},
     result::{BlockchainProtoError, BlockchainProtoResult},
     tokens::Wings,
     transaction::Transaction,
 };
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq)]
 pub(crate) struct Wallet {
-    private_key: PrivateKey,
+    secret_key: SecretKey,
     pubkey: PublicKey,
-    signing_key: SigningKey,
     synced_block_index: BlockIndex,
     // TODO
     confirmed_transactions: ConfirmedTransactions,
@@ -29,196 +30,237 @@ pub(crate) struct Wallet {
 impl Wallet {
     pub(crate) const TRANSACTION_PAYLOAD_LEN: usize = 80;
 
-    pub(crate) fn random() -> Self {
-        let private_key: PrivateKey = {
-            use rand::{rngs::OsRng, RngCore};
-            let mut inner_buf: SecretKey = [0u8; SECRET_KEY_LENGTH];
-            OsRng.fill_bytes(&mut inner_buf);
-            inner_buf
-        }
-        .into();
+    pub(crate) fn random() -> BlockchainProtoResult<Self> {
+        use falcon_rust::falcon1024;
+        use rand::thread_rng;
+        use rand::Rng;
+        let mut rng = thread_rng();
 
-        let signing_key = SigningKey::from_bytes(&private_key);
+        let (sk, pk) = falcon1024::keygen(rng.r#gen());
 
-        let pubkey = (&signing_key.verifying_key()).into();
+        let sk_bytes: [u8; SECRET_KEY_LENGTH] = sk
+            .to_bytes()
+            .try_into()
+            .map_err(|_| BlockchainProtoError::custom("Error converting vec to array for sk"))?;
 
-        Self {
-            private_key,
-            pubkey,
-            signing_key,
+        let pk_bytes: [u8; PUBLIC_KEY_LENGTH] = pk
+            .to_bytes()
+            .try_into()
+            .map_err(|_| BlockchainProtoError::custom("Error converting vec to array for pk"))?;
+
+        Ok(Self {
+            secret_key: sk_bytes.try_into()?,
+            pubkey: pk_bytes.try_into()?,
             // TODO: Implement ledger scanning
             synced_block_index: BlockIndex::zero(),
             // TODO: Implement ledger scanning
             confirmed_transactions: ConfirmedTransactions::empty(),
             // TODO: Implement ledger scanning
             balance: Wings::zero(),
-        }
-    }
-
-    fn generate_nonce(&self, to: &PublicKey, tokens: &Wings) -> BlockchainProtoResult<u64> {
-        use sha2::{Digest, Sha256};
-
-        const NONCE_LENGTH: usize = 112;
-
-        let mut buf: [u8; NONCE_LENGTH] = [0; NONCE_LENGTH];
-
-        let confirmed_transactions_hash: [u8; 32] = {
-            let mut hasher = Sha256::new();
-            let mut buf: Vec<u8> = vec![];
-            for transaction in self.confirmed_transactions.iter() {
-                buf.extend(transaction.serialize_to_bytes()?.to_vec())
-            }
-
-            hasher.update(buf);
-            hasher.finalize().into()
-        };
-
-        buf[0..32].copy_from_slice(&*self.pubkey().as_bytes());
-        buf[32..64].copy_from_slice(&*to.as_bytes());
-        buf[64..72].copy_from_slice(&self.synced_block_index.to_be_bytes());
-        buf[72..104].copy_from_slice(&confirmed_transactions_hash);
-        buf[104..NONCE_LENGTH].copy_from_slice(&self.synced_block_index.to_be_bytes());
-
-        let mut hasher = Sha256::new();
-        hasher.update(buf);
-
-        let hash_result = hasher.finalize();
-
-        let nonce = u64::from_le_bytes(hash_result[0..8].try_into()?);
-
-        Ok(nonce)
-    }
-    pub(crate) fn transfer(
-        &mut self,
-        to: PublicKey,
-        tokens: Wings,
-    ) -> BlockchainProtoResult<Transaction> {
-        let nonce = self.generate_nonce(&to, &tokens)?;
-        let mut buf: [u8; Self::TRANSACTION_PAYLOAD_LEN] = [0; Self::TRANSACTION_PAYLOAD_LEN];
-
-        let from = self.pubkey();
-
-        buf[0..32].copy_from_slice(&**from);
-        buf[32..64].copy_from_slice(&*to);
-        buf[64..72].copy_from_slice(&tokens.as_bytes());
-        buf[72..Self::TRANSACTION_PAYLOAD_LEN].copy_from_slice(&nonce.to_be_bytes());
-
-        let signature = self.sign(&buf);
-
-        let transaction = Transaction {
-            from: self.pubkey().clone(),
-            to,
-            tokens,
-            nonce,
-            signature,
-        };
-        self.confirmed_transactions.push(transaction.clone());
-        Ok(transaction)
-    }
-
-    pub(crate) fn keypair_import(keypair: &[u8; KEYPAIR_LENGTH]) -> BlockchainProtoResult<Self> {
-        let signing_key = SigningKey::from_keypair_bytes(keypair)?;
-
-        let keypair_bytes = signing_key.to_keypair_bytes();
-        let (secret_key_slice, pubkey_slice) = keypair_bytes.split_at(SECRET_KEY_LENGTH);
-
-        let secret_key_bytes: [u8; SECRET_KEY_LENGTH] = secret_key_slice.try_into()?;
-        let pubkey_bytes: [u8; PUBLIC_KEY_LENGTH] = pubkey_slice.try_into()?;
-
-        Ok(Wallet {
-            private_key: secret_key_bytes.into(),
-            pubkey: PublicKey::from_bytes(&pubkey_bytes)?,
-            // TODO: Implement ledger scanning
-            synced_block_index: BlockIndex::zero(),
-            // TODO: Implement ledger scanning
-            confirmed_transactions: ConfirmedTransactions::empty(),
-            // TODO: Implement ledger scanning
-            balance: Wings::zero(),
-            signing_key,
         })
     }
 
-    pub(crate) fn keypair_export(&self) -> [u8; KEYPAIR_LENGTH] {
-        self.signing_key.to_keypair_bytes()
-    }
-
-    pub(crate) fn sign(
-        &self,
-        transaction_payload: &[u8; Self::TRANSACTION_PAYLOAD_LEN],
-    ) -> Signature {
-        self.signing_key.sign(transaction_payload)
-    }
-
-    pub(crate) fn verify(
-        &self,
-        message: &[u8],
-        signature: &Signature,
-        other_pubkey: &PublicKey,
-    ) -> BlockchainProtoResult<()> {
-        use ed25519_dalek::Verifier;
-        let verifying_key: VerifyingKey = other_pubkey.try_into()?;
-        verifying_key.verify(message, signature)?;
-        Ok(())
+    pub(crate) fn secret_key(&self) -> &SecretKey {
+        &self.secret_key
     }
 
     pub(crate) fn pubkey(&self) -> &PublicKey {
         &self.pubkey
     }
-}
 
-#[derive(Debug, PartialEq, Eq)]
-pub(crate) struct PrivateKey([u8; SECRET_KEY_LENGTH]);
-
-impl From<[u8; SECRET_KEY_LENGTH]> for PrivateKey {
-    fn from(value: [u8; SECRET_KEY_LENGTH]) -> Self {
-        Self(value)
+    pub(crate) fn synced_block_index(&self) -> &BlockIndex {
+        &self.synced_block_index
     }
-}
 
-impl Deref for PrivateKey {
-    type Target = [u8; SECRET_KEY_LENGTH];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    pub(crate) fn confirmed_transactions(&self) -> &ConfirmedTransactions {
+        &self.confirmed_transactions
     }
+
+    pub(crate) fn balance(&self) -> &Wings {
+        &self.balance
+    }
+
+    // fn generate_nonce(&self, to: &PublicKey, tokens: &Wings) -> BlockchainProtoResult<u64> {
+    //     use sha2::{Digest, Sha256};
+
+    //     const NONCE_LENGTH: usize = 112;
+
+    //     let mut buf: [u8; NONCE_LENGTH] = [0; NONCE_LENGTH];
+
+    //     let confirmed_transactions_hash: [u8; 32] = {
+    //         let mut hasher = Sha256::new();
+    //         let mut buf: Vec<u8> = vec![];
+    //         for transaction in self.confirmed_transactions.iter() {
+    //             buf.extend(transaction.serialize_to_bytes()?.to_vec())
+    //         }
+
+    //         hasher.update(buf);
+    //         hasher.finalize().into()
+    //     };
+
+    //     buf[0..32].copy_from_slice(&*self.pubkey().as_bytes());
+    //     buf[32..64].copy_from_slice(&*to.as_bytes());
+    //     buf[64..72].copy_from_slice(&self.synced_block_index.to_be_bytes());
+    //     buf[72..104].copy_from_slice(&confirmed_transactions_hash);
+    //     buf[104..NONCE_LENGTH].copy_from_slice(&self.synced_block_index.to_be_bytes());
+
+    //     let mut hasher = Sha256::new();
+    //     hasher.update(buf);
+
+    //     let hash_result = hasher.finalize();
+
+    //     let nonce = u64::from_le_bytes(hash_result[0..8].try_into()?);
+
+    //     Ok(nonce)
+    // }
+
+    // pub(crate) fn transfer(
+    //     &mut self,
+    //     to: PublicKey,
+    //     tokens: Wings,
+    // ) -> BlockchainProtoResult<Transaction> {
+    //     let nonce = self.generate_nonce(&to, &tokens)?;
+    //     let mut buf: [u8; Self::TRANSACTION_PAYLOAD_LEN] = [0; Self::TRANSACTION_PAYLOAD_LEN];
+
+    //     let from = self.pubkey();
+
+    //     buf[0..32].copy_from_slice(&**from);
+    //     buf[32..64].copy_from_slice(&*to);
+    //     buf[64..72].copy_from_slice(&tokens.as_bytes());
+    //     buf[72..Self::TRANSACTION_PAYLOAD_LEN].copy_from_slice(&nonce.to_be_bytes());
+
+    //     let signature = self.sign(&buf);
+
+    //     let transaction = Transaction {
+    //         from: self.pubkey().clone(),
+    //         to,
+    //         tokens,
+    //         nonce,
+    //         signature,
+    //     };
+    //     self.confirmed_transactions.push(transaction.clone());
+    //     Ok(transaction)
+    // }
+
+    // pub(crate) fn keypair_import(keypair: &[u8; KEYPAIR_LENGTH]) -> BlockchainProtoResult<Self> {
+    //     let signing_key = SigningKey::from_keypair_bytes(keypair)?;
+
+    //     let keypair_bytes = signing_key.to_keypair_bytes();
+    //     let (secret_key_slice, pubkey_slice) = keypair_bytes.split_at(SECRET_KEY_LENGTH);
+
+    //     let secret_key_bytes: [u8; SECRET_KEY_LENGTH] = secret_key_slice.try_into()?;
+    //     let pubkey_bytes: [u8; PUBLIC_KEY_LENGTH] = pubkey_slice.try_into()?;
+
+    //     Ok(Wallet {
+    //         private_key: secret_key_bytes.into(),
+    //         pubkey: PublicKey::from_bytes(&pubkey_bytes)?,
+    //         // TODO: Implement ledger scanning
+    //         synced_block_index: BlockIndex::zero(),
+    //         // TODO: Implement ledger scanning
+    //         confirmed_transactions: ConfirmedTransactions::empty(),
+    //         // TODO: Implement ledger scanning
+    //         balance: Wings::zero(),
+    //         signing_key,
+    //     })
+    // }
+
+    // pub(crate) fn keypair_export(&self) -> [u8; KEYPAIR_LENGTH] {
+    //     self.signing_key.to_keypair_bytes()
+    // }
+
+    // pub(crate) fn sign(
+    //     &self,
+    //     transaction_payload: &[u8; Self::TRANSACTION_PAYLOAD_LEN],
+    // ) -> Signature {
+    //     self.signing_key.sign(transaction_payload)
+    // }
+
+    // pub(crate) fn verify(
+    //     &self,
+    //     message: &[u8],
+    //     signature: &Signature,
+    //     other_pubkey: &PublicKey,
+    // ) -> BlockchainProtoResult<()> {
+    //     use ed25519_dalek::Verifier;
+    //     let verifying_key: VerifyingKey = other_pubkey.try_into()?;
+    //     verifying_key.verify(message, signature)?;
+    //     Ok(())
+    // }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct PublicKey([u8; PUBLIC_KEY_LENGTH]);
+pub(crate) struct SecretKey(falcon1024::SecretKey);
 
-impl PublicKey {
-    pub(crate) fn from_bytes(value: &[u8; PUBLIC_KEY_LENGTH]) -> BlockchainProtoResult<Self> {
-        let verifying_key = VerifyingKey::from_bytes(value)?;
-        Ok(Self(*verifying_key.as_bytes()))
+impl SecretKey {
+    pub(crate) fn random() -> Self {
+        use falcon_rust::falcon1024;
+        use rand::thread_rng;
+        use rand::Rng;
+        let mut rng = thread_rng();
+
+        let (sk, _) = falcon1024::keygen(rng.r#gen());
+
+        Self(sk)
     }
-    pub(crate) fn as_bytes(&self) -> &[u8; PUBLIC_KEY_LENGTH] {
-        &self.0
+    pub(crate) fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_bytes()
+    }
+    pub(crate) fn sign(&self, msg: &[u8]) -> Signature {
+        Signature(falcon1024::sign(msg, &self.0))
     }
 }
-
-impl From<&VerifyingKey> for PublicKey {
-    fn from(value: &VerifyingKey) -> Self {
-        Self(*value.as_bytes())
-    }
-}
-
-impl TryFrom<&PublicKey> for VerifyingKey {
+impl TryFrom<[u8; SECRET_KEY_LENGTH]> for SecretKey {
     type Error = BlockchainProtoError;
 
-    fn try_from(value: &PublicKey) -> Result<Self, Self::Error> {
-        Ok(VerifyingKey::from_bytes(&value.0)?)
+    fn try_from(value: [u8; SECRET_KEY_LENGTH]) -> Result<Self, Self::Error> {
+        Ok(Self(falcon1024::SecretKey::from_bytes(&value).map_err(
+            |err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")),
+        )?))
     }
 }
 
-impl Deref for PublicKey {
-    type Target = [u8; PUBLIC_KEY_LENGTH];
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct PublicKey(falcon1024::PublicKey);
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl PublicKey {
+    pub(crate) fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_bytes()
+    }
+}
+impl From<&SecretKey> for PublicKey {
+    fn from(value: &SecretKey) -> Self {
+        Self(falcon1024::PublicKey::from_secret_key(&value.0))
+    }
+}
+impl FromStr for PublicKey {
+    type Err = BlockchainProtoError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use array_bytes::hex2bytes;
+        let bytes = hex2bytes(s)?;
+        let pk = falcon1024::PublicKey::from_bytes(&bytes)
+            .map_err(|err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")))?;
+        Ok(Self(pk))
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl TryFrom<[u8; PUBLIC_KEY_LENGTH]> for PublicKey {
+    type Error = BlockchainProtoError;
+
+    fn try_from(value: [u8; PUBLIC_KEY_LENGTH]) -> Result<Self, Self::Error> {
+        let pk = falcon1024::PublicKey::from_bytes(&value)
+            .map_err(|err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")))?;
+        Ok(Self(pk))
+    }
+}
+
+impl Display for PublicKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex_pubkey(&self))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ConfirmedTransactions(Vec<Transaction>);
 impl ConfirmedTransactions {
     pub(crate) fn empty() -> Self {
@@ -240,54 +282,65 @@ impl DerefMut for ConfirmedTransactions {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Signature(falcon1024::Signature);
+
+impl Signature {
+    pub(crate) fn to_bytes(&self) -> Vec<u8> {
+        self.0.to_bytes()
+    }
+}
+
+impl TryFrom<[u8; SIGNATURE_LENGTH]> for Signature {
+    type Error = BlockchainProtoError;
+
+    fn try_from(value: [u8; SIGNATURE_LENGTH]) -> Result<Self, Self::Error> {
+        Ok(Self(falcon1024::Signature::from_bytes(&value).map_err(
+            |err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")),
+        )?))
+    }
+}
+
+impl Display for Signature {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", hex_signature(&self))
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::proto::helpers::hex_to_string::{hex_pubkey, hex_signing_key};
+    use crate::proto::helpers::hex_to_string::hex_pubkey;
 
     use super::*;
 
     #[test]
     fn test_wallet_hex_pubkey() {
-        let wallet = Wallet::random();
+        let wallet = Wallet::random().unwrap();
         let pubkey_hex = hex_pubkey(wallet.pubkey());
         assert_eq!(pubkey_hex.chars().count(), PUBLIC_KEY_LENGTH * 2);
         assert!(pubkey_hex.chars().all(|c| c.is_ascii_hexdigit()));
     }
 
     #[test]
-    fn test_wallet_hex_signing_key() {
-        let wallet = Wallet::random();
-        let signing_key_hex = hex_signing_key(&wallet.signing_key);
-        assert_eq!(signing_key_hex.chars().count(), KEYPAIR_LENGTH * 2);
-        assert!(signing_key_hex.chars().all(|c| c.is_ascii_hexdigit()));
+    fn test_wallet_creation() {
+        let wallet = Wallet::random().unwrap();
+        assert_eq!(wallet.pubkey().to_bytes().len(), PUBLIC_KEY_LENGTH);
     }
 
     #[test]
-    fn test_wallet_invalid_keypair_import() {
-        let invalid_keypair = [0u8; KEYPAIR_LENGTH];
-        assert!(Wallet::keypair_import(&invalid_keypair).is_err());
+    fn test_pubkey_conversion() {
+        let wallet = Wallet::random().unwrap();
+        let pubkey = wallet.pubkey();
+        let byte_array = pubkey.to_bytes();
+
+        let converted_pk = falcon1024::PublicKey::from_bytes(&byte_array).unwrap();
+
+        assert_eq!(byte_array, converted_pk.to_bytes());
     }
-}
 
-#[test]
-fn test_wallet_creation() {
-    let wallet = Wallet::random();
-    assert_eq!(wallet.pubkey().0.len(), PUBLIC_KEY_LENGTH);
-}
-
-#[test]
-fn test_pubkey_conversion() {
-    let wallet = Wallet::random();
-    let pubkey = wallet.pubkey();
-
-    let verifying_key: VerifyingKey = pubkey.try_into().unwrap();
-    let converted_pubkey: PublicKey = (&verifying_key).into();
-
-    assert_eq!(pubkey, &converted_pubkey);
-}
-
-#[test]
-fn test_private_key_creation() {
-    let private_key: PrivateKey = [0u8; SECRET_KEY_LENGTH].into();
-    assert_eq!(private_key.0.len(), SECRET_KEY_LENGTH);
+    #[test]
+    fn test_private_key_creation() {
+        let private_key: SecretKey = [0u8; SECRET_KEY_LENGTH].try_into().unwrap();
+        assert_eq!(private_key.to_bytes().len(), SECRET_KEY_LENGTH);
+    }
 }

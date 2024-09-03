@@ -1,6 +1,5 @@
-use ed25519_dalek::SigningKey;
 use h10::http::{
-    headers::{From, IntoHeader, UserAgent},
+    headers::{Authorization, From, IntoHeader, UserAgent, WWWAuthenticate},
     method::Method,
     request::Request,
     status_code::StatusCode,
@@ -11,7 +10,12 @@ use crate::{
         result::{ServerError, ServerResult},
         ServerResponse,
     },
-    proto::helpers::hex_to_string::hex_array_32,
+    proto::{
+        blockchain::{
+            constants::PUBLIC_KEY_LENGTH, result::BlockchainProtoError, wallet::PublicKey,
+        },
+        helpers::hex_to_string::{hex_byte, hex_pubkey, hex_slice},
+    },
     NODE_CONFIG,
 };
 
@@ -21,35 +25,70 @@ pub(super) struct NewPeer;
 impl NewPeer {
     pub(super) fn handler(request: &Request) -> ServerResult<ServerResponse> {
         if *request.method() == Method::Get {
-            let maybe_user_agent = request
+            let user_agent = match request
                 .headers()
-                .get(UserAgent::default().into_header().name());
-            let maybe_user_from = request.headers().get(From::default().into_header().name());
-            if let Some(user_agent) = maybe_user_agent {
-                println!("NodeServer: (NewPeer): [{}]", user_agent);
-            }
+                .get(UserAgent::default().into_header().name())
+            {
+                Some(header_entry) => header_entry,
+                None => return Ok(ServerResponse::new(StatusCode::BadRequest)),
+            };
 
-            if let Some(from) = maybe_user_from {
-                println!("NodeServer: (NewPeer): [{}]", from);
-            }
-            let signing_key = NODE_CONFIG
+            let from = match request.headers().get(From::default().into_header().name()) {
+                Some(header_entry) => header_entry,
+                None => return Ok(ServerResponse::new(StatusCode::BadRequest)),
+            };
+
+            let client_pubkey_str = &**from.value();
+
+            let client_pubkey: PublicKey = client_pubkey_str.parse()?;
+
+            let maybe_user_authorization = request
+                .headers()
+                .get(Authorization::default().into_header().name());
+
+            println!("NodeServer: (NewPeer): [{}]", user_agent);
+            println!("NodeServer: (NewPeer): [{}]", from);
+
+            let secret_key = NODE_CONFIG
                 .get()
-                .and_then(|config| {
-                    config
-                        .secret_key()
-                        .map(|secret| SigningKey::from_bytes(&secret))
-                })
+                .and_then(|config| config.secret_key())
                 .ok_or(ServerError::NodeSigningKey(
                     "Error on getting signingkey".into(),
                 ))?;
 
-            let pubkey = signing_key.verifying_key();
+            let challenge: [u8; 8] = {
+                use rand::{rngs::OsRng, RngCore};
+                let mut inner_buf = [0u8; 8];
+                OsRng.fill_bytes(&mut inner_buf);
+                inner_buf
+            };
 
-            let pubkey_str = hex_array_32(&pubkey.to_bytes());
+            let pubkey = PublicKey::from(secret_key);
 
-            let from = From::new(&pubkey_str)?;
+            let realm_str = format!("{}", client_pubkey);
 
-            Ok(ServerResponse::new(StatusCode::OK).add_header(from))
+            let signature = secret_key.sign(&challenge);
+
+            let challenge_str = hex_slice(&challenge);
+
+            let mut to_sign: [u8; PUBLIC_KEY_LENGTH + 8] = [0; PUBLIC_KEY_LENGTH + 8];
+            to_sign[0..PUBLIC_KEY_LENGTH].copy_from_slice(&client_pubkey.to_bytes());
+            to_sign[PUBLIC_KEY_LENGTH..PUBLIC_KEY_LENGTH + 8].copy_from_slice(&challenge);
+
+            let signature = {
+                use base64::{engine::general_purpose, Engine as _};
+                let inner_signature = secret_key.sign(&to_sign);
+                let b64_outcome = general_purpose::STANDARD.encode(inner_signature.to_bytes());
+                b64_outcome
+            };
+
+            let header_value = format!(
+                r#"PKI realm="{realm_str}", challenge="{challenge_str}", signature="{signature}", public_key="{pubkey}""#,
+            );
+
+            let www_authenticate = WWWAuthenticate::new(&header_value)?;
+
+            Ok(ServerResponse::new(StatusCode::Unauthorized).add_header(www_authenticate))
         } else {
             Ok(ServerResponse::new(StatusCode::NotFound))
         }

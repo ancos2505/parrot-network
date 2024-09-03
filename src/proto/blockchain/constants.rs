@@ -1,9 +1,24 @@
-use ed25519_dalek::KEYPAIR_LENGTH;
+pub(crate) const KEYGEN_SEED_LENGTH: usize = 32;
 
-#[cfg(debug_assertions)]
-pub(crate) const DEV_TEST_WALLET_KEYPAIR: [u8; KEYPAIR_LENGTH] = [
-    220, 116, 147, 75, 98, 35, 13, 68, 10, 29, 85, 38, 145, 221, 122, 231, 147, 101, 135, 95, 57,
-    113, 141, 140, 249, 84, 72, 29, 241, 146, 118, 114, 218, 155, 117, 254, 29, 70, 2, 11, 31, 24,
-    233, 70, 252, 111, 242, 230, 29, 68, 23, 75, 156, 68, 123, 43, 38, 125, 78, 160, 232, 122, 204,
-    230,
-];
+pub(crate) const SECRET_KEY_LENGTH: usize = Falcon1024::SECRET_KEY_LENGTH;
+pub(crate) const PUBLIC_KEY_LENGTH: usize = Falcon1024::PUBLIC_KEY_LENGTH;
+pub(crate) const SIGNATURE_LENGTH: usize = Falcon1024::SIGNATURE_LENGTH;
+
+/// ## Falcon 1024
+///
+/// **Key sizes:**
+/// - Secret key size: **2305** bytes (fixed-length)
+/// - Public key size: **1793** bytes (fixed-length)
+///
+///  The "1024" in Falcon 1024 refers to a higher security level. It's designed
+/// to provide **256 bits** of post-quantum security (equivalent to **AES-256**)
+/// .
+struct Falcon1024;
+impl Falcon1024 {
+    pub(crate) const SECRET_KEY_LENGTH: usize = 2305;
+    pub(crate) const PUBLIC_KEY_LENGTH: usize = 1793;
+    pub(crate) const SIGNATURE_LENGTH: usize = 1280;
+}
+
+pub(crate) const LOCAL_NET_GENESIS_WALLET_SECRET_KEY: [u8; Falcon1024::SECRET_KEY_LENGTH] =
+    *(include_bytes!("../../../misc/localnet_genesis_wallet.dat"));

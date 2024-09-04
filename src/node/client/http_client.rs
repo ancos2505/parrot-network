@@ -34,12 +34,17 @@ impl ParrotHttpClient {
         let should_terminate = Arc::new(AtomicBool::new(false));
         let should_terminate_clone = Arc::clone(&should_terminate);
 
-        let handle = thread::spawn(move || -> H10LibResult<()> {
+        let stack_size = 20 * 1024 * 1024;
+
+        let builder = thread::Builder::new().stack_size(stack_size);
+
+        let handle = builder.spawn(move || -> H10LibResult<()> {
             let is_done = should_terminate_clone.load(Ordering::SeqCst);
 
             if !is_done {
                 let request = cloned_arc_req_str;
                 let connection_string = cloned_arc_connect_str;
+
                 let res_response_str = Self::request(request, connection_string);
 
                 let is_done_after_response = should_terminate_clone.load(Ordering::SeqCst);
@@ -49,7 +54,7 @@ impl ParrotHttpClient {
                 }
             }
             Ok(())
-        });
+        })?;
 
         let mut maybe_response: Option<String> = None;
 
@@ -86,7 +91,7 @@ impl ParrotHttpClient {
         let mut stream = TcpStream::connect(connect_str.as_str())?;
 
         stream.write_all(request_str.as_bytes())?;
-
+        // TODO
         stream.read(&mut response_buffer)?;
 
         let response = Response::parse(&response_buffer)?;

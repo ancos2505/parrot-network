@@ -1,6 +1,6 @@
 use crate::proto::blockchain::{
     block::Block,
-    constants::LOCAL_NET_GENESIS_WALLET_SECRET_KEY,
+    // constants::LOCAL_NET_GENESIS_WALLET_SECRET_KEY,
     result::{BlockchainProtoError, BlockchainProtoResult},
     tokens::Wings,
     traits::Serializable,

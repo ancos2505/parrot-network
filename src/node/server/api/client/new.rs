@@ -12,7 +12,9 @@ use crate::{
     },
     proto::{
         blockchain::{
-            constants::PUBLIC_KEY_LENGTH, result::BlockchainProtoError, wallet::PublicKey,
+            // constants::PUBLIC_KEY_LENGTH,
+            result::BlockchainProtoError,
+            wallet::PublicKey,
         },
         helpers::hex_to_string::{hex_byte, hex_pubkey, hex_slice},
     },
@@ -33,12 +35,8 @@ impl NewPeer {
                 None => return Ok(ServerResponse::new(StatusCode::BadRequest)),
             };
 
-            let from = match request.headers().get(From::default().into_header().name()) {
-                Some(header_entry) => header_entry,
-                None => return Ok(ServerResponse::new(StatusCode::BadRequest)),
-            };
-
-            let client_pubkey_str = &**from.value();
+            // TODO get from Authorization
+            let client_pubkey_str = "";
 
             let client_pubkey: PublicKey = client_pubkey_str.parse()?;
 
@@ -47,7 +45,6 @@ impl NewPeer {
                 .get(Authorization::default().into_header().name());
 
             println!("NodeServer: (NewPeer): [{}]", user_agent);
-            println!("NodeServer: (NewPeer): [{}]", from);
 
             let secret_key = NODE_CONFIG
                 .get()
@@ -71,9 +68,12 @@ impl NewPeer {
 
             let challenge_str = hex_slice(&challenge);
 
-            let mut to_sign: [u8; PUBLIC_KEY_LENGTH + 8] = [0; PUBLIC_KEY_LENGTH + 8];
-            to_sign[0..PUBLIC_KEY_LENGTH].copy_from_slice(&client_pubkey.to_bytes());
-            to_sign[PUBLIC_KEY_LENGTH..PUBLIC_KEY_LENGTH + 8].copy_from_slice(&challenge);
+            let mut to_sign = vec![];
+            to_sign.extend(client_pubkey.to_bytes());
+            to_sign.extend(challenge);
+            // let mut to_sign: [u8; PUBLIC_KEY_LENGTH + 8] = [0; PUBLIC_KEY_LENGTH + 8];
+            // to_sign[0..PUBLIC_KEY_LENGTH].copy_from_slice(&client_pubkey.to_bytes());
+            // to_sign[PUBLIC_KEY_LENGTH..PUBLIC_KEY_LENGTH + 8].copy_from_slice(&challenge);
 
             let signature = {
                 use base64::{engine::general_purpose, Engine as _};

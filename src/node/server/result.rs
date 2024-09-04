@@ -12,7 +12,7 @@ use std::{
 use h10::http::{result::H10LibError, status_code::StatusCode};
 use redb::{CommitError, DatabaseError, StorageError, TableError, TransactionError};
 
-use crate::proto::blockchain::result::BlockchainProtoError;
+use crate::{node::webui::result::WebUiError, proto::blockchain::result::BlockchainProtoError};
 
 pub(crate) type ServerResult<T> = Result<T, ServerError>;
 
@@ -36,6 +36,7 @@ pub(crate) enum ServerError {
     TryFromSliceError(TryFromSliceError),
     BlockchainProtoError(BlockchainProtoError),
     NodeSigningKey(String),
+    WebUiError(WebUiError),
     Custom(String),
 }
 
@@ -45,6 +46,11 @@ impl ServerError {
     }
 }
 
+impl From<WebUiError> for ServerError {
+    fn from(value: WebUiError) -> Self {
+        Self::WebUiError(value)
+    }
+}
 impl From<BlockchainProtoError> for ServerError {
     fn from(value: BlockchainProtoError) -> Self {
         Self::BlockchainProtoError(value)
@@ -152,6 +158,7 @@ impl Display for ServerError {
             Self::TryFromSliceError(err) => output.push_str(format!("{err}").as_str()),
             Self::BlockchainProtoError(err) => output.push_str(format!("{err}").as_str()),
             Self::NodeSigningKey(err) => output.push_str(format!("{err}").as_str()),
+            Self::WebUiError(err) => output.push_str(format!("{err}").as_str()),
             Self::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)

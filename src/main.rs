@@ -9,6 +9,7 @@ use std::{
 };
 
 use clap::Parser;
+use node::server::result::ServerError;
 use proto::blockchain::wallet::SecretKey;
 
 use crate::{
@@ -80,12 +81,19 @@ fn smain() -> ServerResult<()> {
         WebUiServer::run()
     });
 
-    let th_node_client = thread::spawn(|| -> ClientResult<()> {
+    let stack_size = 20 * 1024 * 1024;
+
+    let builder = thread::Builder::new().stack_size(stack_size);
+
+    let th_node_client = builder.spawn(|| -> ClientResult<()> {
         sleep(Duration::from_millis(5_000));
         NodeClient::run()
-    });
+    })?;
 
-    NodeServer::run()?;
-
-    Ok(())
+    let builder = thread::Builder::new().stack_size(stack_size);
+    
+    let th_node_server = builder.spawn(|| -> ServerResult<()> { NodeServer::run() })?;
+    th_node_server
+        .join()
+        .map_err(|_| ServerError::custom("Error on thread join in th_node_server"))?
 }

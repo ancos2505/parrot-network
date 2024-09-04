@@ -70,11 +70,11 @@ impl NodeConfig {
     pub(crate) fn toml(&self) -> &ConfigFromToml {
         &self.toml
     }
-    
+
     pub(crate) fn secret_key(&self) -> Option<&SecretKey> {
         self.secret_key.as_ref()
     }
-    
+
     pub(crate) fn set_secret_key(&mut self, secret_key: SecretKey) {
         self.secret_key = Some(secret_key);
     }

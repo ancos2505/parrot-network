@@ -13,7 +13,10 @@ use http_client::ParrotHttpClient;
 use result::ClientError;
 
 use crate::{
-    proto::{blockchain::wallet::{PublicKey, SecretKey}, helpers::hex_to_string::hex_slice},
+    proto::{
+        blockchain::wallet::{PublicKey, SecretKey},
+        helpers::hex_to_string::hex_slice,
+    },
     NODE_CONFIG,
 };
 
@@ -58,13 +61,6 @@ impl NodeClient {
                 "Error on getting signingkey".into(),
             ))?;
 
-        let challenge: [u8; 8] = {
-            use rand::{rngs::OsRng, RngCore};
-            let mut inner_buf = [0u8; 8];
-            OsRng.fill_bytes(&mut inner_buf);
-            inner_buf
-        };
-
         let pubkey = PublicKey::from(secret_key);
 
         let challenge: [u8; 8] = {
@@ -84,19 +80,19 @@ impl NodeClient {
             r#"PKI realm="{realm_str}", challenge="{challenge_str}", signature="{signature}", public_key="{pubkey}""#,
         );
 
-        let header_from = Authorization::new(&header_value)?;
+        // let authorization = Authorization::new(&header_value)?;
 
         let user_agent = UserAgent::custom(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))?;
 
         let request = Request::get()
             .path(UrlPath::new_unchecked("/api/client/new"))
             .add_header(user_agent)
-            .add_header(header_from)
+            // .add_header(authorization)
             .finish();
 
         println!("NodeServer: Send request to {}", peer);
 
-        println!("NodeClient: Sending Request:\n{request}");
+        println!("NodeClient: Sending Request...");
 
         let timeout = Duration::from_secs(5);
 

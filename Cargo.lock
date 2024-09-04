@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "parrot-network"
-version = "0.0.17"
+version = "0.0.18"
 dependencies = [
  "array-bytes",
  "base64",

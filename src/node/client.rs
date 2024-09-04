@@ -80,23 +80,23 @@ impl NodeClient {
             r#"PKI realm="{realm_str}", challenge="{challenge_str}", signature="{signature}", public_key="{pubkey}""#,
         );
 
-        // let authorization = Authorization::new(&header_value)?;
+        let authorization = Authorization::new(&header_value)?;
 
         let user_agent = UserAgent::custom(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))?;
 
         let request = Request::get()
             .path(UrlPath::new_unchecked("/api/client/new"))
             .add_header(user_agent)
-            // .add_header(authorization)
+            .add_header(authorization)
             .finish();
 
         println!("NodeServer: Send request to {}", peer);
 
         println!("NodeClient: Sending Request...");
-
+        println!("{}", request);
         let timeout = Duration::from_secs(5);
 
-        let response_str = match ParrotHttpClient::launch(request, peer.to_string(), timeout) {
+        let response = match ParrotHttpClient::launch(request, peer.to_string(), timeout) {
             Ok(res) => res,
             Err(err) => {
                 // TODO Blocklist peer;
@@ -104,8 +104,6 @@ impl NodeClient {
                 return Err(err.into());
             }
         };
-
-        let response = ResponseParser::parse(response_str.as_bytes())?;
 
         let elapsed = start.elapsed().as_secs_f32();
         println!("NodeClient: Response received:\n{response}");

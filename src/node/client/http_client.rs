@@ -23,7 +23,7 @@ impl ParrotHttpClient {
         request: Request,
         connection_string: S,
         timeout: Duration,
-    ) -> H10LibResult<String> {
+    ) -> H10LibResult<Response> {
         let arc_req_str = Arc::new(request.to_string());
         let cloned_arc_req_str = Arc::clone(&arc_req_str);
 
@@ -56,7 +56,7 @@ impl ParrotHttpClient {
             Ok(())
         })?;
 
-        let mut maybe_response: Option<String> = None;
+        let mut maybe_response: Option<Response> = None;
 
         match rx.recv_timeout(timeout) {
             Ok(response_str) => {
@@ -82,7 +82,7 @@ impl ParrotHttpClient {
         }
     }
 
-    fn request(request_str: Arc<String>, connect_str: Arc<String>) -> H10LibResult<String> {
+    fn request(request_str: Arc<String>, connect_str: Arc<String>) -> H10LibResult<Response> {
         use std::io::{Read, Write};
         use std::net::TcpStream;
 
@@ -96,6 +96,6 @@ impl ParrotHttpClient {
 
         let response = Response::parse(&response_buffer)?;
 
-        Ok(response.to_string())
+        Ok(response)
     }
 }

@@ -5,7 +5,7 @@ use std::{
     process::ExitCode,
     sync::{atomic::AtomicUsize, OnceLock},
     thread::{self, sleep},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use clap::Parser;
@@ -50,8 +50,10 @@ fn smain() -> ServerResult<()> {
     let mut node_config = NodeConfig::load(cli)?;
 
     // TODO
-
+    println!("Main: Generating secret key for node...");
+    let start = Instant::now();
     node_config.set_secret_key(SecretKey::random());
+    println!("Main: Generated in {} secs.", start.elapsed().as_secs_f32());
 
     NODE_CONFIG.get_or_init(|| node_config);
 
@@ -91,7 +93,7 @@ fn smain() -> ServerResult<()> {
     })?;
 
     let builder = thread::Builder::new().stack_size(stack_size);
-    
+
     let th_node_server = builder.spawn(|| -> ServerResult<()> { NodeServer::run() })?;
     th_node_server
         .join()

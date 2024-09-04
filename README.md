@@ -1,13 +1,13 @@
 # parrot-network
 
-Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol (WIP)
+Experimental public Distributed Ledger Technology (DLT) built on top of HTTP/1.0 (RFC-1945) protocol (WIP)
 
 ## Getting Started
 
 
 ### Installation
 ```sh
-$ cargo install --debug parrot-network
+$ cargo install parrot-network
 ```
 
 ### Installed mode

@@ -2,7 +2,7 @@
 edition = "2021"
 rust-version = "1.80.1"
 name = "parrot-network"
-version = "0.0.19"
+version = "0.0.20"
 description = "Experimental public Distributed Ledger Technology (DLT) built on top of HTTP/1.0 (RFC-1945) protocol"
 readme = "README.md"
 keywords = ["blockchain", "http", "server", "web", "crypto"]
@@ -24,7 +24,7 @@ html-rs = "0.3"
 rand = "0.8.5"
 redb = "2.1.2"
 serde = { version = "1.0.209", features = ["serde_derive"] }
-serde_json = "1.0.127"
+serde_json = "1.0.128"
 sha2 = "0.10.8"
 toml = "0.8.19"
 

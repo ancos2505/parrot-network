@@ -45,12 +45,14 @@ impl ParrotHttpClient {
                 let request = cloned_arc_req_str;
                 let connection_string = cloned_arc_connect_str;
 
-                let res_response_str = Self::request(request, connection_string);
+                let res_response = Self::request(request, connection_string);
 
                 let is_done_after_response = should_terminate_clone.load(Ordering::SeqCst);
 
                 if !is_done_after_response {
-                    tx.send(res_response_str?)?;
+                    tx.send(res_response?)?;
+                } else {
+                    unreachable!("This block should stop at tx.send(...)")
                 }
             }
             Ok(())

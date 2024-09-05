@@ -51,6 +51,7 @@ impl From<WebUiError> for ServerError {
         Self::WebUiError(value)
     }
 }
+
 impl From<BlockchainProtoError> for ServerError {
     fn from(value: BlockchainProtoError) -> Self {
         Self::BlockchainProtoError(value)

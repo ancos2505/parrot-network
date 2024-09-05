@@ -4,9 +4,9 @@ pub(crate) mod result;
 use std::{thread, time::Duration};
 
 use h10::http::{
-    headers::{Authorization, UserAgent},
+    headers::{Authorization, UserAgent, WWWAuthenticate},
     request::Request,
-    response::parser::ResponseParser,
+    response::Response,
     url_path::UrlPath,
 };
 use http_client::ParrotHttpClient;
@@ -14,8 +14,15 @@ use result::ClientError;
 
 use crate::{
     proto::{
-        blockchain::wallet::{PublicKey, SecretKey},
-        helpers::hex_to_string::hex_slice,
+        blockchain::{
+            result::{BlockchainProtoError, BlockchainProtoResult},
+            wallet::PublicKey,
+        },
+        node_session::{
+            fields::Realm,
+            pki_client_challenge::{fields::ClientChallenge, PkiClientChallenge},
+            pki_server_challenge::PkiServerChallenge,
+        },
     },
     NODE_CONFIG,
 };
@@ -60,27 +67,22 @@ impl NodeClient {
             .ok_or(ClientError::NodeSigningKey(
                 "Error on getting signingkey".into(),
             ))?;
+        let public_key = PublicKey::from(secret_key);
 
-        let pubkey = PublicKey::from(secret_key);
+        let client_realm = Realm::ParrotNode;
 
-        let challenge: [u8; 8] = {
-            use rand::{rngs::OsRng, RngCore};
-            let mut inner_buf = [0u8; 8];
-            OsRng.fill_bytes(&mut inner_buf);
-            inner_buf
+        let pki_challenge = {
+            let challenge = ClientChallenge::new();
+            let signature = secret_key.sign(challenge.as_bytes());
+            PkiClientChallenge::builder()
+                .realm(client_realm.clone())
+                .challenge(challenge)
+                .signature(signature)
+                .public_key(public_key)
+                .finish()
         };
 
-        let signature = secret_key.sign(&challenge);
-
-        let challenge_str = hex_slice(&challenge);
-
-        let realm_str = format!("{pubkey}");
-
-        let header_value = format!(
-            r#"PKI realm="{realm_str}", challenge="{challenge_str}", signature="{signature}", public_key="{pubkey}""#,
-        );
-
-        let authorization = Authorization::new(&header_value)?;
+        let authorization = Authorization::new(&pki_challenge.to_string())?;
 
         let user_agent = UserAgent::custom(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))?;
 
@@ -110,6 +112,49 @@ impl NodeClient {
         println!("NodeClient: StatusCode: {}", response.status());
         println!("NodeClient: Response received in {} secs", elapsed);
 
+        let pki_server_challenge = parse_and_check_server_challenge(&response, &client_realm)?;
+
+        println!(
+            "NodeClient: (Server responded with realm [{:?}]",
+            pki_server_challenge.realm()
+        );
+
         Ok(())
     }
+}
+
+fn parse_and_check_server_challenge(
+    response: &Response,
+    client_realm: &Realm,
+) -> BlockchainProtoResult<PkiServerChallenge> {
+    use h10::http::headers::IntoHeader;
+    let www_authenticate = response
+        .headers()
+        .get(WWWAuthenticate::default().into_header().name())
+        .ok_or(BlockchainProtoError::PkiChallenge(
+            "Invalid HTTP Response from server. Reason: There's no WWWAuthenticate header".into(),
+        ))?;
+
+    // * Check if server's challenge is valid - BEGIN
+
+    let req_pki_server_challenge = www_authenticate.value().parse::<PkiServerChallenge>()?;
+
+    let server_realm = req_pki_server_challenge.realm();
+    let server_challenge = req_pki_server_challenge.challenge();
+    let server_signature = req_pki_server_challenge.signature();
+    let server_public_key = req_pki_server_challenge.public_key();
+
+    // TODO: Implement more sophisticated validation
+    if client_realm != server_realm || !server_challenge.verify(server_signature, server_public_key)
+    {
+        return Err(BlockchainProtoError::PkiChallenge(
+            "Invalid Payload inside WWW-Authenticate header".into(),
+        ));
+    } else {
+
+        // TODO: Add to an in-memory Database for servers in handshaking process
+    }
+    // * Check if client's server_challenge is valid  - END
+
+    Ok(req_pki_server_challenge)
 }

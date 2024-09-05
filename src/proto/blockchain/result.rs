@@ -4,17 +4,20 @@ use std::{
 };
 
 use array_bytes::Error as ArrayBytesError;
+use h10::http::result::H10LibError;
 
 pub(crate) type BlockchainProtoResult<T> = Result<T, BlockchainProtoError>;
 
 #[derive(Debug)]
 pub(crate) enum BlockchainProtoError {
+    H10LibError(H10LibError),
     TryFromSliceError(TryFromSliceError),
     TryFromIntError(TryFromIntError),
     SystemTimeError(SystemTimeError),
     ArrayBytesError(ArrayBytesError),
     TokenConversion(String),
     FalconDeserializationError(String),
+    PkiChallenge(String),
     Custom(String),
 }
 
@@ -48,10 +51,17 @@ impl From<TryFromSliceError> for BlockchainProtoError {
     }
 }
 
+impl From<H10LibError> for BlockchainProtoError {
+    fn from(value: H10LibError) -> Self {
+        Self::H10LibError(value)
+    }
+}
+
 impl Display for BlockchainProtoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = "".to_string();
         match self {
+            BlockchainProtoError::H10LibError(err) => output.push_str(format!("{err}").as_str()),
             BlockchainProtoError::TryFromSliceError(err) => {
                 output.push_str(format!("{err}").as_str())
             }
@@ -70,6 +80,7 @@ impl Display for BlockchainProtoError {
             BlockchainProtoError::FalconDeserializationError(err) => {
                 output.push_str(format!("{err}").as_str())
             }
+            BlockchainProtoError::PkiChallenge(err) => output.push_str(format!("{err}").as_str()),
             BlockchainProtoError::Custom(err) => output.push_str(format!("{err}").as_str()),
         };
         write!(f, "{}", output)

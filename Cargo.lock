@@ -223,9 +223,9 @@ dependencies = [
 
 [[package]]
 name = "h10"
-version = "0.6.17"
+version = "0.6.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a8adcdb6583c2f6905452689bf0b4c6e801c32e9734067248fe8a9a3c630ec0"
+checksum = "1252f08e81802e058291d52dbb7e9e64d3088910aebd0e7200cc606992512fc7"
 dependencies = [
  "html-rs",
 ]
@@ -388,7 +388,7 @@ dependencies = [
 
 [[package]]
 name = "parrot-network"
-version = "0.0.19"
+version = "0.0.20"
 dependencies = [
  "array-bytes",
  "base64",
@@ -508,9 +508,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.127"
+version = "1.0.128"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8043c06d9f82bd7271361ed64f415fe5e12a77fdb52e573e7f06a516dea329ad"
+checksum = "6ff5456707a1de34e7e37f2a6fd3d3f808c318259cbd01ab6377795054b483d8"
 dependencies = [
  "itoa",
  "memchr",

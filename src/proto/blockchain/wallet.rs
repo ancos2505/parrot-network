@@ -4,13 +4,15 @@ use std::{
     str::FromStr,
 };
 
+use array_bytes::hex2array;
+
 use falcon_rust::falcon1024;
 
 use crate::proto::helpers::hex_to_string::{hex_pubkey, hex_signature};
 
 use super::{
     block::BlockIndex,
-    // constants::{PUBLIC_KEY_LENGTH, SECRET_KEY_LENGTH, SIGNATURE_LENGTH},
+    constants::SIGNATURE_BYTES_LENGTH,
     result::{BlockchainProtoError, BlockchainProtoResult},
     tokens::Wings,
     transaction::Transaction,
@@ -213,6 +215,9 @@ impl PublicKey {
     pub(crate) fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes()
     }
+    pub(crate) fn as_inner(&self) -> &falcon1024::PublicKey {
+        &self.0
+    }
 }
 
 impl From<falcon1024::PublicKey> for PublicKey {
@@ -238,16 +243,6 @@ impl FromStr for PublicKey {
         Ok(Self(pk))
     }
 }
-
-// impl TryFrom<Box<[u8; PUBLIC_KEY_LENGTH]>> for PublicKey {
-//     type Error = BlockchainProtoError;
-
-//     fn try_from(value: Box<[u8; PUBLIC_KEY_LENGTH]>) -> Result<Self, Self::Error> {
-//         let pk = falcon1024::PublicKey::from_bytes(&*value)
-//             .map_err(|err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")))?;
-//         Ok(Self(pk))
-//     }
-// }
 
 impl Display for PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -284,17 +279,21 @@ impl Signature {
     pub(crate) fn to_bytes(&self) -> Vec<u8> {
         self.0.to_bytes()
     }
+    pub(crate) fn as_inner(&self) -> &falcon1024::Signature {
+        &self.0
+    }
 }
 
-// impl TryFrom<[u8; SIGNATURE_LENGTH]> for Signature {
-//     type Error = BlockchainProtoError;
+impl FromStr for Signature {
+    type Err = BlockchainProtoError;
 
-//     fn try_from(value: [u8; SIGNATURE_LENGTH]) -> Result<Self, Self::Error> {
-//         Ok(Self(falcon1024::Signature::from_bytes(&value).map_err(
-//             |err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")),
-//         )?))
-//     }
-// }
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let bytes: [u8; SIGNATURE_BYTES_LENGTH] = hex2array(s)?;
+        let signature = falcon1024::Signature::from_bytes(&bytes)
+            .map_err(|err| BlockchainProtoError::FalconDeserializationError(format!("{err:?}")))?;
+        Ok(Self(signature))
+    }
+}
 
 impl Display for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -304,7 +303,7 @@ impl Display for Signature {
 
 #[cfg(test)]
 mod tests {
-    use crate::proto::helpers::hex_to_string::hex_pubkey;
+    // use crate::proto::helpers::hex_to_string::hex_pubkey;
 
     use super::*;
 

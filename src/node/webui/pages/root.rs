@@ -53,7 +53,7 @@ pub(crate) fn root(request: Request) -> H10LibResult<WebUiResponse> {
 
     let div = Div::builder().append_child(
         Div::builder()
-            .append_child(H1::builder().append_child(TextContent::text("It works!")))
+            .append_child(H1::builder().append_child(TextContent::text("Parrot node")))
             .append_child(card)
             .append_child(P::builder().append_child(TextContent::text("You can disable <strong>Javascript</strong> in your browser and the app still works!"))),
     );

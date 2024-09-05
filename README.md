@@ -1,6 +1,6 @@
 # parrot-network
 
-Experimental public Distributed Ledger Technology (DLT) built on top of HTTP/1.0 (RFC-1945) protocol (WIP)
+Experimental public Distributed Ledger Technology (DLT)
 
 ## Getting Started
 
@@ -21,7 +21,7 @@ $ parrot-node --help
 
 ### Usage
 ```
-Experimental public blockchain built on top of HTTP/1.0 (RFC-1945) protocol
+Experimental public Distributed Ledger Technology (DLT)
 
 Usage: parrot-node [OPTIONS]
 
@@ -34,7 +34,6 @@ Options:
       --verbose                    
   -h, --help                       Print help
   -V, --version                    Print version
-
 ```
 ### Dev mode
 

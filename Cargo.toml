@@ -1,11 +1,11 @@
 [package]
 edition = "2021"
-rust-version = "1.80.1"
+rust-version = "1.81.0"
 name = "parrot-network"
-version = "0.0.20"
-description = "Experimental public Distributed Ledger Technology (DLT) built on top of HTTP/1.0 (RFC-1945) protocol"
+version = "0.0.21"
+description = "Experimental public Distributed Ledger Technology (DLT)"
 readme = "README.md"
-keywords = ["blockchain", "http", "server", "web", "crypto"]
+keywords = ["dag", "dlt", "ledger", "web3", "crypto"]
 categories = ["network-programming", "web-programming", "rust-patterns"]
 license = "MIT"
 repository = "https://github.com/ancos2505/parrot-network"
@@ -43,8 +43,6 @@ harness = false
 
 [lints.rust]
 unsafe-code = "forbid"
-# box-pointers = "deny"
-box-pointers = "allow"
 deprecated-in-future = "forbid"
 deprecated-safe = "forbid"
 elided-lifetimes-in-paths = "forbid"

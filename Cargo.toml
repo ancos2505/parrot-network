@@ -2,7 +2,7 @@
 edition = "2021"
 rust-version = "1.81.0"
 name = "parrot-network"
-version = "0.0.21"
+version = "0.0.22"
 description = "Experimental public Distributed Ledger Technology (DLT)"
 readme = "README.md"
 keywords = ["dag", "dlt", "ledger", "web3", "crypto"]

@@ -1,10 +1,9 @@
 use std::str::FromStr;
 
-use validator::DagValidator;
-
-use super::*;
-
-use crate::proto::{blockchain::wallet::PublicKey, dag};
+use crate::proto::{
+    blockchain::wallet::PublicKey,
+    dag::{validator::DagValidator, Dag, DagEdge, DagEdgeId, DagNodeData, DagNodeId},
+};
 
 fn mock_pubkey1() -> PublicKey {
     let hex = "0a1699b732f3e88362d0d699eb5c582f99aa4733875e648d18549011dd5e4c25a25348388f828623422fa3a52823e1aa9d18ab9eec15b443d5205a10b2dc01f440426e819ce3638ae134fbf449e1a7cc7ed64e2f3644b85600ce8c070ef084c89be2485b095e15ba152a497919e8221933746908f3c2a2ef964afa545e81983924ec0a69862d9c52bcdb2f00d94d3eb172d82c045e4197f8f9085abc725901c1e3ccb02c5f219361a233b08320cf230311da18ca27150c99a24deaccac9f9db1d9174a672c8a691b07ec943599408f52505b527400976af06a0b9528e293e0c931393a7e4b9396d7b440fecb9ad0cfaf982b992faade209e205744e45420c4efc4b31db159c473245f0d4c2a6cb1e205cb41ad4572047cd7b37d4c5c07d543c32504845ba09d7d0d01b355eae2049770a72a98018b93dd083335ee835541d0d69108ce8f7434d0f44d030c86cc0043809a44ac5b802a96d8568e156a2865216c0eb5227511e41314d3b9ace602b16d7a4459571f435ea71b174e78831aba68f007ab673254937e4b2f5fd629a40ea6fa216c6519aa42ac977dbd6b77ef57379663906dda0301d578d94e48e73f7660f4e8070cb174249942874c2c6edd7394a938555e1af24850f97efea232304aafbb46fe15b79923538e84251f16f72c2c1d33ed6281b47910c490d64054d5ca896ce366382acc9890e2e63328c972ad47272c76ad7b9ba10e3e6e4811bb9d27bc686b42479d82b0001598dae16c6f55c3c826ddf0554a179280801c099c9cda6401bb8a3d14c8a91bea4db698e44d08430aacf646cda73491611901a54add5e7e4a0037217c2d59da08975c6f45be2e96ef162022b132d3b290173e3c9e854928a185f66edbe3c7d464b9e887b548a923d61673d36dfa383ab030994a311d9475c2c454d88235c162d2ef2dabdac86533296d75a943f80b56052a909805f34cf47555d5f4ea8ee8090e4f09d96fcf4bfc31570252c237e6d088d4d6c2bea1a60243d2369625431410e5854485bd9445549310901759c753e11175ade056254e3aeceefb8e1f4a57d5176a80825829dde24bc6d0b69130ea1a1cd7a25c41e1815219787b310e009ce0579c964ac1a35ec842393bbb8b0ad284183e6864dde3aad05ba9a4cf094806631b616167b76d1853ce1107575199496f5a0652b833f1179ac164809abafeec1b538e9776d49f8fb63da49637419d9a0e7f659d6a2b86565e8a9dc2f1a8a459395c9a311d2ac3da86e11044b2caa1134a499d322208a584745c96cf3be3916d7451f87bad5e68b119378ad5629c07809bf74411256386ca39ca49d86639a3536105a933b1c79a8d4fe368898081a9c47a81513e8bbb08054b1276998ec6c83e5236e992859d66ec96317d40948c74b348f581c54daad6fb3fa0dc5d306403dfab7f656ed443ef2acb719e0819218b3d52126943ff5d3a60ce86a95014ce1980957384e3385bdd8ae54f1375166e9f4028cca9a2b9a807309ef48da1a859deca1d66dc1d435808bc2221e6518febb748f21365e6072299e0aff661d1cd956474b9fa1f532ed1e57ad74d4d5b6454fac66edea6e93987c9547c8b59e0f262530567b4bc37b2685c1ddd1a889586783358316638c98798dccf890b866e23699718d9e46a00721811b41e957a384a49f20df11839b2e3b5c7cd8f34f2465250910af24219b5c7613fcd81b28d4d80bf063f12c0648c2e2a374a87284554fa8d97ad29b921e6a4997287ea824d35e0c99acb55f66282a953816b6994352a12fdb2697daac81a35040e9e70ce25bc85099cca3f8ea211de5323eb4e5a99d8af24c0a3b47931463032517e6d461252dc87d01d163184985c9242b50462a32ecc54467c612deb815ff4b6fb6f9a19055aa0d6b3ebb39bad3f5a2e19e183d90893e1abcc876edd9802eee08105e6d9a5e26aa1b5431677cc8119690200bba693321cf4d2fd6853af35a8d593d2ceb9e43caa9208c71af983b77f2e0c659a0d35da45220e2d4518da5de6677ccf8a5e62ca3186cdd07ad10260c40fd67bda0182f8416354e2677bfcbe05df679f95d09d5ac604493836d57868e437b4a8cc897784b81422145203118eb0d1d4f830d0371724da2af9e88d7ec995f26704c197a4acb6a169f3ac618489af914008f112f5889ce25169a1862a48601184fa106bd39da360bc95e98ddd8be5bc868641bfbefc45866755bf406889591eeeb6bb819410c856f39ab45fd0c90ef9938540678d8599a1b642257706e98156ffa2b252d79afdbce070cf429cfa40b0135c5912457f272496942632d3927b981c62c63af873c92a7c105d08f21b0a3ea52bb7eb4f2789558d6325051bb2f5c76bb6226b5321b5563d6c2a27269ac50ae2670d6eef81e4edbc4655e1c23de09039f63e70c75964695ecf0026913e826ed56667549c9dd687852d65b828eced94f28a6c96b89a39d1cd8535d04dd36b069b81690855e3209c2b6583d9b6108362f6d0ebf61fdf0b11cf05a1c56c826807a6346112";
@@ -22,335 +21,70 @@ fn mock_pubkey3() -> PublicKey {
 }
 
 #[test]
-fn test_new_dag() {
-    let dag = Dag::new();
-    assert!(dag.nodes.is_empty());
-    assert!(dag.edges.is_empty());
-    assert_eq!(dag.last_node, None);
-    assert_eq!(dag.last_edge, None);
+fn test_valid_dag() {
+    let mut dag = Dag::new();
+    let node1 = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
+    let node2 = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
+    let node3 = dag.add_node(DagNodeData(mock_pubkey3())).unwrap();
+
+    dag.add_edge(&node1, &node2).unwrap();
+    dag.add_edge(&node2, &node3).unwrap();
+
+    let validator = DagValidator::new(&dag);
+    assert!(validator.is_valid());
+    assert!(!validator.has_cycle());
+    assert!(validator.all_edges_reference_existing_nodes());
 }
 
 #[test]
-fn test_add_node() {
+fn test_dag_with_cycle() {
     let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-    let key2 = mock_pubkey2();
+    let node1 = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
+    let node2 = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
+    let node3 = dag.add_node(DagNodeData(mock_pubkey3())).unwrap();
 
-    let node1_id = dag.add_node(DagNodeData(key1.clone())).unwrap();
-    assert_eq!(node1_id, DagNodeId::new(1));
-    assert_eq!(dag.nodes.len(), 1);
-
-    let node2_id = dag.add_node(DagNodeData(key2.clone())).unwrap();
-    assert_eq!(node2_id, DagNodeId::new(2));
-    assert_eq!(dag.nodes.len(), 2);
-
-    // Try to add a duplicate node
-    let result = dag.add_node(DagNodeData(key1));
-    assert!(result.is_err());
-    assert_eq!(dag.nodes.len(), 2);
-}
-
-#[test]
-fn test_add_edge() {
-    let mut dag = Dag::new();
-    let pubkey1 = mock_pubkey1();
-    let pubkey2 = mock_pubkey2();
-
-    let node1_id = dag.add_node(DagNodeData(pubkey1)).unwrap();
-    let node2_id = dag.add_node(DagNodeData(pubkey2)).unwrap();
-
-    let edge_id = dag.add_edge(&node1_id, &node2_id).unwrap();
-    assert_eq!(edge_id, DagEdgeId::new(1));
-    assert_eq!(dag.edges.len(), 1);
-
-    // Try to add an edge with non-existent nodes
-    let non_existent_id = DagNodeId::new(999);
-    let result = dag.add_edge(&node1_id, &non_existent_id);
-    assert!(result.is_err());
-    assert_eq!(dag.edges.len(), 1);
-}
-
-#[test]
-fn test_dag_structure() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-    let key2 = mock_pubkey2();
-    let key3 = mock_pubkey3();
-
-    let node1_id = dag.add_node(DagNodeData(key1)).unwrap();
-    let node2_id = dag.add_node(DagNodeData(key2)).unwrap();
-    let node3_id = dag.add_node(DagNodeData(key3)).unwrap();
-
-    dag.add_edge(&node1_id, &node2_id).unwrap();
-    dag.add_edge(&node1_id, &node3_id).unwrap();
-    dag.add_edge(&node2_id, &node3_id).unwrap();
-
-    assert_eq!(dag.nodes.len(), 3);
-    assert_eq!(dag.edges.len(), 3);
-
-    // Verify the structure
-    let edge1 = dag
-        .edges
-        .iter()
-        .find(|e| e.from == node1_id && e.to == node2_id)
-        .unwrap();
-    let edge2 = dag
-        .edges
-        .iter()
-        .find(|e| e.from == node1_id && e.to == node3_id)
-        .unwrap();
-    let edge3 = dag
-        .edges
-        .iter()
-        .find(|e| e.from == node2_id && e.to == node3_id)
-        .unwrap();
-
-    assert!(edge1.id < edge2.id);
-    assert!(edge2.id < edge3.id);
-}
-
-#[test]
-fn test_dag_node_and_edge_ids() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-    let key2 = mock_pubkey2();
-
-    let node1_id = dag.add_node(DagNodeData(key1)).unwrap();
-    let node2_id = dag.add_node(DagNodeData(key2)).unwrap();
-
-    assert_eq!(node1_id, DagNodeId::new(1));
-    assert_eq!(node2_id, DagNodeId::new(2));
-
-    let edge_id = dag.add_edge(&node1_id, &node2_id).unwrap();
-    assert_eq!(edge_id, DagEdgeId::new(1));
-}
-
-#[test]
-fn error_on_add_same_node() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-    // Same Public key
-    let key2 = mock_pubkey1();
-
-    let node_1 = DagNodeData(key1);
-    let node_2 = DagNodeData(key2);
-
-    assert_eq!(&node_1, &node_2);
-
-    let node1_id = dag.add_node(node_1).unwrap();
-    let res = dag.add_node(node_2);
-
-    assert!(res.is_err())
-}
-
-///////////////////////////
-
-#[test]
-fn ok_on_add_new_edge() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-    let key2 = mock_pubkey2();
-
-    let node1_id = dag.add_node(DagNodeData(key1)).unwrap();
-    let node2_id = dag.add_node(DagNodeData(key2)).unwrap();
-
-    let edge_id = dag.add_edge(&node1_id, &node2_id);
-    assert!(edge_id.is_ok());
-    assert_eq!(dag.edges.len(), 1);
-}
-
-#[test]
-fn err_on_add_edge_with_non_existent_from_node() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-
-    let node1_id = dag.add_node(DagNodeData(key1)).unwrap();
-    let non_existent_id = DagNodeId::new(999);
-
-    let edge_id = dag.add_edge(&non_existent_id, &node1_id);
-    assert!(edge_id.is_err());
-    assert_eq!(dag.edges.len(), 0);
-}
-
-#[test]
-fn err_on_add_edge_with_non_existent_to_node() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-
-    let node1_id = dag.add_node(DagNodeData(key1)).unwrap();
-    let non_existent_id = DagNodeId::new(999);
-
-    let edge_id = dag.add_edge(&node1_id, &non_existent_id);
-    assert!(edge_id.is_err());
-    assert_eq!(dag.edges.len(), 0);
-}
-
-#[test]
-fn err_on_add_self_loop_edge() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-
-    let node1_id = dag.add_node(DagNodeData(key1)).unwrap();
-
-    let edge_id = dag.add_edge(&node1_id, &node1_id);
-    assert!(edge_id.is_err());
-    assert_eq!(dag.edges.len(), 0);
-}
-
-#[test]
-fn ok_on_add_multiple_nodes() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-    let key2 = mock_pubkey2();
-    let key3 = mock_pubkey3();
-
-    let node1_id = dag.add_node(DagNodeData(key1));
-    let node2_id = dag.add_node(DagNodeData(key2));
-    let node3_id = dag.add_node(DagNodeData(key3));
-
-    assert!(node1_id.is_ok());
-    assert!(node2_id.is_ok());
-    assert!(node3_id.is_ok());
-    assert_eq!(dag.nodes.len(), 3);
-}
-
-#[test]
-fn err_on_add_duplicate_node() {
-    let mut dag = Dag::new();
-    let key1 = mock_pubkey1();
-
-    let node1_id = dag.add_node(DagNodeData(key1.clone()));
-    let duplicate_node_id = dag.add_node(DagNodeData(key1));
-
-    assert!(node1_id.is_ok());
-    assert!(duplicate_node_id.is_err());
-    assert_eq!(dag.nodes.len(), 1);
-}
-
-#[test]
-fn err_on_add_node_with_max_id() {
-    let mut dag = Dag::new();
-    dag.last_node = Some(DagNodeId::MAX);
-
-    let result = dag.add_node(DagNodeData(mock_pubkey1()));
-    assert!(result.is_err());
-    assert_eq!(result.unwrap_err(), "Maximum id for DagNodeId reached!");
-}
-
-#[test]
-fn err_on_add_edge_with_self_referencial_nodes() {
-    let mut dag = Dag::new();
-    let node1_id = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
-
-    let result = dag.add_edge(&node1_id, &node1_id);
-
-    assert_eq!(
-        result.unwrap_err(),
-        "Invalid edge, since `from` and `to` is the same DagNode"
-    );
-}
-
-#[test]
-fn err_on_add_cyclic_edge() {
-    let mut dag = Dag::new();
-    let node1_id = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
-    let node2_id = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
-
-    dag.add_edge(&node1_id, &node2_id).unwrap();
-
-    let result = dag.add_edge(&node2_id, &node1_id);
+    dag.add_edge(&node1, &node2).unwrap();
+    dag.add_edge(&node2, &node3).unwrap();
+    let result = dag.add_edge(&node3, &node1);
 
     assert_eq!(
         result.unwrap_err(),
         "Trying to add an DagEdge that would cause cycle"
     );
 
-    let has_cycle = DagValidator::new(&dag).has_cycle();
-
-    let all_edges_reference_existing_nodes =
-        DagValidator::new(&dag).all_edges_reference_existing_nodes();
-
-    let is_valid = DagValidator::new(&dag).is_valid();
-
-    assert!(!has_cycle);
-    assert!(all_edges_reference_existing_nodes);
-    assert!(is_valid);
-}
-
-
-#[test]
-fn err_on_add_duplicate_edge() {
-    let mut dag = Dag::new();
-    let node1_id = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
-    let node2_id = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
-
-    dag.add_edge(&node1_id, &node2_id).unwrap();
-    let result = dag.add_edge(&node1_id, &node2_id);
-
-    assert!(result.is_ok()); // Current implementation allows duplicate edges
-                             // If you want to prevent duplicate edges, you should modify the implementation and update this test
+    let validator = DagValidator::new(&dag);
+    
+    assert!(validator.is_valid());
+    assert!(!validator.has_cycle());
+    assert!(validator.all_edges_reference_existing_nodes());
 }
 
 #[test]
-fn err_on_add_edge_with_non_existent_nodes() {
+fn test_dag_with_invalid_edge() {
     let mut dag = Dag::new();
-    let non_existent_id1 = DagNodeId::new(999);
-    let non_existent_id2 = DagNodeId::new(1000);
+    let node1 = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
+    let node2 = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
 
-    let result = dag.add_edge(&non_existent_id1, &non_existent_id2);
-    assert!(result.is_err());
-    assert_eq!(
-        result.unwrap_err(),
-        "Trying to add an DagEdge without a valid `from` DagNode"
-    );
+    dag.add_edge(&node1, &node2).unwrap();
+
+    // Add an edge referencing a non-existent node
+    dag.edges.push(DagEdge {
+        id: DagEdgeId::new(2),
+        from: node1.clone(),
+        to: DagNodeId::new(999), // This node doesn't exist
+    });
+
+    let validator = DagValidator::new(&dag);
+    assert!(!validator.is_valid());
+    assert!(!validator.has_cycle());
+    assert!(!validator.all_edges_reference_existing_nodes());
 }
 
 #[test]
-fn ok_on_add_multiple_edges_between_same_nodes() {
-    let mut dag = Dag::new();
-    let node1_id = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
-    let node2_id = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
-
-    let edge1_id = dag.add_edge(&node1_id, &node2_id).unwrap();
-    let edge2_id = dag.add_edge(&node1_id, &node2_id).unwrap();
-
-    assert_ne!(edge1_id, edge2_id);
-    assert_eq!(dag.edges.len(), 2);
-}
-
-#[test]
-fn err_on_add_node_after_reaching_max_id() {
-    let mut dag = Dag::new();
-    dag.last_node = Some(DagNodeId::new(u128::MAX));
-
-    let result = dag.add_node(DagNodeData(mock_pubkey1()));
-    assert!(result.is_err());
-    assert_eq!(result.unwrap_err(), "Maximum id for DagNodeId reached!");
-}
-
-#[test]
-fn ok_on_add_edge_with_max_id() {
-    let mut dag = Dag::new();
-    let node1_id = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
-    let node2_id = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
-
-    dag.last_edge = Some(DagEdgeId::new(u128::MAX - 1));
-
-    let result = dag.add_edge(&node1_id, &node2_id);
-    assert!(result.is_ok());
-    assert_eq!(*result.unwrap(), u128::MAX);
-}
-
-#[test]
-fn err_on_add_edge_after_reaching_max_id() {
-    let mut dag = Dag::new();
-    let node1_id = dag.add_node(DagNodeData(mock_pubkey1())).unwrap();
-    let node2_id = dag.add_node(DagNodeData(mock_pubkey2())).unwrap();
-
-    dag.last_edge = Some(DagEdgeId::new(u128::MAX));
-
-    let result = dag.add_edge(&node1_id, &node2_id);
-    assert!(result.is_err());
-    // Note: The current implementation doesn't check for max edge ID.
-    // You may want to add this check and update the test accordingly.
+fn test_empty_dag() {
+    let dag = Dag::new();
+    let validator = DagValidator::new(&dag);
+    assert!(validator.is_valid());
+    assert!(!validator.has_cycle());
+    assert!(validator.all_edges_reference_existing_nodes());
 }

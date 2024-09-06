@@ -1,3 +1,5 @@
+mod validator;
+
 #[cfg(test)]
 mod tests;
 
@@ -5,6 +7,8 @@ mod tests;
 // TODO: https://en.wikipedia.org/wiki/Topological_sorting
 
 use std::ops::{Add, Deref};
+
+use validator::DagValidator;
 
 use super::blockchain::wallet::PublicKey;
 
@@ -35,7 +39,23 @@ impl Dag {
             last_edge: None,
         }
     }
+
     pub fn add_node<N: Into<DagNodeData>>(&mut self, input: N) -> Result<DagNodeId, String> {
+        {
+            let is_reached_max = match (&self.last_node, self.nodes.last()) {
+                (None, None) => false,
+                (None, Some(last)) => last.id == DagNodeId::MAX,
+                (Some(last_node_id), None) => *last_node_id == DagNodeId::MAX,
+                (Some(last_node_id), Some(last)) => {
+                    last.id == DagNodeId::MAX || **last_node_id == u128::MAX
+                }
+            };
+
+            if is_reached_max {
+                return Err("Maximum id for DagNodeId reached!".into());
+            }
+        }
+
         let new_data: DagNodeData = input.into();
 
         for item in self.nodes.iter() {
@@ -62,8 +82,27 @@ impl Dag {
     }
 
     pub fn add_edge<I: AsRef<DagNodeId>>(&mut self, from: I, to: I) -> Result<DagEdgeId, String> {
+        {
+            let is_reached_max = match (&self.last_edge, self.edges.last()) {
+                (None, None) => false,
+                (None, Some(last)) => last.id == DagEdgeId::MAX,
+                (Some(last_edge_id), None) => *last_edge_id == DagEdgeId::MAX,
+                (Some(last_edge_id), Some(last)) => {
+                    last.id == DagEdgeId::MAX || **last_edge_id == u128::MAX
+                }
+            };
+
+            if is_reached_max {
+                return Err("Maximum id for DagNodeId reached!".into());
+            }
+        }
+        
         let new_from = from.as_ref();
         let new_to = to.as_ref();
+
+        if new_from == new_to {
+            return Err("Invalid edge, since `from` and `to` is the same DagNode".into());
+        }
 
         let mut from_found = false;
         let mut to_found = false;
@@ -101,7 +140,14 @@ impl Dag {
             to: new_to.clone(),
         };
 
-        self.edges.push(new_edge);
+        let would_cause_cycle = DagValidator::new(&self).would_cause_cycle(&new_edge);
+        
+        if would_cause_cycle {
+            return Err("Trying to add an DagEdge that would cause cycle".into());
+        } else {
+            self.edges.push(new_edge);
+        }
+        
 
         self.last_edge = Some(new_edge_id.clone());
 
@@ -128,6 +174,7 @@ pub struct DagNodeData(PublicKey);
 pub struct DagNodeId(u128);
 
 impl DagNodeId {
+    const MAX: DagNodeId = DagNodeId(u128::MAX);
     const fn new(new_id: u128) -> Self {
         Self(new_id)
     }
@@ -158,17 +205,18 @@ impl AsRef<DagNodeId> for DagNodeId {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct DagEdgeId(u128);
 
+impl DagEdgeId {
+    const MAX: DagEdgeId = DagEdgeId(u128::MAX);
+    const fn new(new_id: u128) -> Self {
+        Self(new_id)
+    }
+}
+
 impl Deref for DagEdgeId {
     type Target = u128;
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl DagEdgeId {
-    const fn new(new_id: u128) -> Self {
-        Self(new_id)
     }
 }
 
